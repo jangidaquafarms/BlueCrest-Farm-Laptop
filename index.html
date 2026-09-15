@@ -206,7 +206,7 @@ body.app-body {
   overflow-y: auto; 
   position: relative;
 }
-.ledger-records-table { min-width:1120px; }
+.ledger-records-table { min-width:1180px; }
 .ledger-records-table td { font-size:0.78rem; }
 .ledger-records-table th:last-child, .ledger-records-table td:last-child { min-width:150px; }
 .ledger-status-badge { display:inline-block; padding:0.25rem 0.5rem; border-radius:var(--radius-pill); background:#f1f5f9; color:#475569; font-size:0.68rem; font-weight:800; white-space:nowrap; }
@@ -881,6 +881,7 @@ body > .invoice-product-dropdown {
 .form-help{display:block;color:var(--text-muted);font-size:.72rem;margin-top:.35rem;}
 .stocking-number-disabled{background:#f3f6fa !important;color:#94a3b8 !important;cursor:not-allowed !important;}
 .form-help{display:block;color:var(--text-muted);font-size:.72rem;margin-top:.35rem;}
+.hd-disabled-input{display:inline-flex;align-items:center;justify-content:center;min-width:72px;height:40px;border:1px solid #d5dfeb;border-radius:10px;color:#9aa7b6;background:#f5f7fa;font-weight:800;}
 </style>
 
   <!-- Firebase SDKs for Cloud Sync (unpkg) -->
@@ -1421,7 +1422,7 @@ body > .invoice-product-dropdown {
 #inventoryView .inv-prof-tab.active{background:#1677e8;color:#fff;border-color:#1677e8}
 #inventoryView .closing-stock-button{width:220px;min-width:220px;height:48px;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;background:#1677e8;color:#fff;border:1px solid #1677e8;border-radius:10px;padding:0 1rem;font-weight:800;cursor:pointer;box-shadow:none;white-space:nowrap;font-size:.88rem}#inventoryView .closing-stock-button:hover{background:#126bd2;border-color:#126bd2}#inventoryView #physical-settlement-btn{background:#0f766e;border-color:#0f766e}#inventoryView #physical-settlement-btn:hover{background:#0b635d;border-color:#0b635d}#inventoryView #crop-closing-stock-view-btn{background:#fff !important;color:#1677e8 !important;border:1px solid #1677e8 !important}#inventoryView #crop-closing-stock-view-btn:hover{background:#f5f9ff !important} @media (max-width:900px){#inventoryView .closing-stock-button{width:100%;min-width:0}#inventoryView #crop-closing-stock-panel{width:100%}}
 #inventoryView .inv-prof-table-wrap{background:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:14px;box-shadow:var(--shadow-card);overflow:auto}
-#inventoryView .inv-prof-table{width:max-content;min-width:1120px;border-collapse:collapse;table-layout:auto}
+#inventoryView .inv-prof-table{width:max-content;min-width:1180px;border-collapse:collapse;table-layout:auto}
 #inventoryView .inv-prof-table th{background:#f3f7fb;color:#365779;font-size:.72rem;text-align:left;padding:.7rem .5rem;border-bottom:1px solid var(--border-subtle);white-space:nowrap}
 #inventoryView .inv-prof-table td{padding:.62rem .5rem;border-bottom:1px solid #edf1f5;font-size:.76rem;vertical-align:middle}
 #inventoryView .inv-prof-table tbody tr:last-child td{border-bottom:0}
@@ -1755,6 +1756,7 @@ input,select,textarea{border-radius:10px;}
 #ledgerView .finance-page-header,
 #feedView .page-header-row,
 #historyView .history-page-header,
+#treatmentLogView > div:first-child,
 #harvestView > div:first-child{
   display:flex !important;
   justify-content:space-between !important;
@@ -1774,7 +1776,8 @@ input,select,textarea{border-radius:10px;}
 #financeView .finance-page-header > div:first-child,
 #ledgerView .finance-page-header > div:first-child,
 #feedView .page-header-row > div:first-child,
-#historyView .history-page-header > div:first-child{
+#historyView .history-page-header > div:first-child,
+#treatmentLogView > div:first-child > div:first-child{
   min-width:0;
 }
 
@@ -1782,6 +1785,7 @@ input,select,textarea{border-radius:10px;}
 #ledgerView .finance-page-header h2,
 #feedView .page-header-row h2,
 #historyView .history-page-header h2,
+#treatmentLogView > div:first-child h2,
 #harvestView > div:first-child h2{
   margin:.05rem 0 .3rem !important;
   font-size:1.65rem !important;
@@ -1794,7 +1798,8 @@ input,select,textarea{border-radius:10px;}
 #financeView .finance-page-header p,
 #ledgerView .finance-page-header p,
 #feedView .page-header-row small,
-#historyView .history-page-header small{
+#historyView .history-page-header small,
+#treatmentLogView > div:first-child p{
   margin:0 !important;
   font-size:.82rem !important;
   line-height:1.45 !important;
@@ -1819,6 +1824,7 @@ input,select,textarea{border-radius:10px;}
 #ledgerView .finance-page-header > span,
 #feedView .page-header-row > button,
 #historyView .history-page-header > button,
+#treatmentLogView > div:first-child > button,
 #harvestView > div:first-child > button{
   flex-shrink:0 !important;
 }
@@ -1867,6 +1873,7 @@ input,select,textarea{border-radius:10px;}
 #financeView .small-pill-btn,
 #feedView #openFeedRecordBtn,
 #historyView #openModalBtn,
+#treatmentLogView > div:first-child > button,
 #harvestView > div:first-child > button{
   border:1px solid rgba(255,255,255,.28) !important;
   border-radius:999px !important;
@@ -1882,6 +1889,7 @@ input,select,textarea{border-radius:10px;}
 #financeView .small-pill-btn:hover,
 #feedView #openFeedRecordBtn:hover,
 #historyView #openModalBtn:hover,
+#treatmentLogView > div:first-child > button:hover,
 #harvestView > div:first-child > button:hover{
   transform:translateY(-1px) !important;
   box-shadow:0 9px 20px rgba(0,0,0,.18) !important;
@@ -4370,6 +4378,20 @@ body.bc-return-modal-open{overflow:hidden!important}
 @media(max-width:520px){#stockReturnModal .invoice-header-grid{grid-template-columns:1fr}#stockReturnModal .bc-return-modal-body{padding:.85rem}}
 </style>
 
+<style id="bluecrest-harvest-decision">
+#harvestDecisionView{padding-bottom:2rem}
+.hd-hero{display:flex;justify-content:space-between;gap:1.2rem;align-items:center;padding:1.25rem 1.35rem;margin-bottom:1rem;border-radius:20px;background:linear-gradient(112deg,#082f49,#0d5265 55%,#126b73);color:#fff;box-shadow:0 14px 34px rgba(15,42,68,.14)}
+.hd-hero h1{margin:0;font-size:1.55rem;font-weight:900;letter-spacing:-.03em}.hd-hero p{margin:.3rem 0 0;color:rgba(255,255,255,.76);font-size:.74rem;font-weight:600}.hd-badge{padding:.7rem .9rem;border:1px solid rgba(255,255,255,.18);border-radius:14px;background:rgba(255,255,255,.09);font-size:.68rem;font-weight:800;white-space:nowrap}
+.hd-filter{display:grid;grid-template-columns:1fr 1fr;gap:.8rem;padding:1rem;margin-bottom:1rem;border:1px solid #dbe5ed;border-radius:16px;background:#fff;box-shadow:0 5px 18px rgba(15,23,42,.05)}
+.hd-field span{display:block;margin-bottom:.35rem;font-size:.63rem;font-weight:900;letter-spacing:.08em;color:#64748b}.hd-field select{width:100%;min-height:42px;border:1px solid #cfdbe6;border-radius:10px;padding:.55rem .7rem;background:#fff;color:#17324d;font-weight:800}
+.hd-current{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:.65rem;margin-bottom:1rem}.hd-card{padding:.8rem .85rem;border:1px solid #dbe5ed;border-radius:14px;background:#fff}.hd-card span{display:block;color:#64748b;font-size:.62rem;font-weight:800}.hd-card strong{display:block;margin-top:.18rem;color:#102f4a;font-size:1rem;font-weight:900}.hd-card small{display:block;margin-top:.12rem;color:#94a3b8;font-size:.58rem}
+.hd-decision{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:1rem 1.1rem;margin-bottom:1rem;border:1px solid #dbe5ed;border-radius:16px;background:#fff}.hd-decision-main h3{margin:0;font-size:.82rem;font-weight:900}.hd-decision-main p{margin:.25rem 0 0;color:#64748b;font-size:.7rem}.hd-decision-value{text-align:right}.hd-decision-value strong{display:block;font-size:1.25rem;font-weight:950}.hd-decision-value span{font-size:.62rem;color:#64748b;font-weight:800}.hd-decision.hd-status-red{border-color:#f1c8c5;background:#fff6f5}.hd-decision.hd-status-yellow{border-color:#ead9a5;background:#fffaf0}.hd-decision.hd-status-green{border-color:#cfe3db;background:#f4fbf7}.hd-status-red .hd-decision-main h3,.hd-status-red .hd-decision-value strong{color:#b42318}.hd-status-yellow .hd-decision-main h3,.hd-status-yellow .hd-decision-value strong{color:#9a6700}.hd-status-green .hd-decision-main h3,.hd-status-green .hd-decision-value strong{color:#087443}
+.hd-table-card{border:1px solid #dbe5ed;border-radius:16px;background:#fff;overflow:hidden;box-shadow:0 5px 18px rgba(15,23,42,.05)}.hd-table-head{padding:1rem 1.1rem;border-bottom:1px solid #e4ebf1}.hd-table-head h2{margin:0;font-size:1rem;color:#17324d}.hd-table-head p{margin:.22rem 0 0;color:#64748b;font-size:.68rem}.hd-table-wrap{overflow:auto}.hd-table{width:100%;min-width:1180px;border-collapse:collapse}.hd-table th{padding:.7rem .6rem;background:#f8fafc;color:#64748b;font-size:.61rem;text-transform:uppercase;letter-spacing:.04em;text-align:left;white-space:nowrap}.hd-table td{padding:.65rem .6rem;border-top:1px solid #edf2f6;color:#17324d;font-size:.7rem;vertical-align:middle}.hd-table tr.hd-now{background:#f8fbff}.hd-table tr.hd-best{background:#f3fbf6}.hd-table input{width:78px;box-sizing:border-box;min-height:34px;border:1px solid #cbd8e3;border-radius:8px;padding:.35rem .45rem;font-size:.7rem;font-weight:800;color:#17324d}.hd-table .hd-number{text-align:right}.hd-table .hd-profit{font-weight:900}.hd-table .hd-good{color:#087443}.hd-table .hd-bad{color:#b42318}.hd-table .hd-warning{color:#9a6700}.hd-table .hd-profit-neutral{color:#64748b}.hd-note{margin-top:.75rem;padding:.75rem .9rem;border:1px dashed #cbd8e3;border-radius:12px;background:#fbfdff;color:#64748b;font-size:.66rem;line-height:1.45}.hd-empty{padding:2rem;text-align:center;color:#64748b}.hd-loading{padding:1.5rem;text-align:center;color:#64748b}
+@media(max-width:1000px){.hd-current{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:650px){.hd-hero{align-items:flex-start;flex-direction:column}.hd-badge{width:100%;box-sizing:border-box}.hd-filter{grid-template-columns:1fr}.hd-current{grid-template-columns:1fr 1fr}.hd-decision{align-items:flex-start;flex-direction:column}.hd-decision-value{text-align:left}}
+.hd-breakdown-btn{margin-top:.3rem;padding:.2rem .45rem;border:1px solid #bfd4e5;border-radius:7px;background:#fff;color:#1769aa;font-size:.58rem;font-weight:850;cursor:pointer;white-space:nowrap}.hd-breakdown-btn:hover{background:#f2f8fc}
+.hd-breakdown-overlay{position:fixed;inset:0;z-index:10050;display:none;align-items:center;justify-content:center;padding:1rem;background:rgba(8,24,39,.58);backdrop-filter:blur(3px)}.hd-breakdown-overlay.open{display:flex}.hd-breakdown-dialog{width:min(560px,calc(100vw - 24px));max-height:calc(100vh - 30px);overflow:auto;border:1px solid #d9e4ed;border-radius:18px;background:#fff;box-shadow:0 28px 80px rgba(5,25,45,.30)}.hd-breakdown-head{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1rem 1.1rem;background:linear-gradient(112deg,#12304d,#17677d);color:#fff}.hd-breakdown-head h3{margin:0;font-size:1rem;font-weight:900}.hd-breakdown-head p{margin:.2rem 0 0;color:rgba(255,255,255,.75);font-size:.64rem}.hd-breakdown-close{width:34px;height:34px;border:1px solid rgba(255,255,255,.25);border-radius:9px;background:rgba(255,255,255,.1);color:#fff;font-size:1.3rem;cursor:pointer}.hd-breakdown-body{padding:1rem 1.1rem}.hd-breakdown-section{margin-bottom:.85rem;border:1px solid #dfe8ef;border-radius:13px;overflow:hidden}.hd-breakdown-section h4{margin:0;padding:.55rem .7rem;background:#f7fafc;color:#52677b;font-size:.65rem;text-transform:uppercase;letter-spacing:.05em}.hd-breakdown-row{display:flex;justify-content:space-between;gap:1rem;padding:.48rem .7rem;border-top:1px solid #edf2f6;font-size:.7rem;color:#29435a}.hd-breakdown-row strong{font-weight:900;color:#17324d}.hd-breakdown-total{background:#f4fbf7}.hd-breakdown-total strong{color:#087443;font-size:.8rem}.hd-breakdown-formula{padding:.7rem;border-radius:10px;background:#fbfdff;color:#64748b;font-size:.65rem;line-height:1.5}.hd-breakdown-foot{padding:.75rem 1.1rem;border-top:1px solid #e5edf3;color:#64748b;font-size:.6rem}
+</style>
 </head>
 <body class="app-body">
 
@@ -4451,10 +4473,6 @@ body.bc-return-modal-open{overflow:hidden!important}
           </div>
         </div>
 
-        <button class="nav-item" data-route="harvest" type="button">
-          <span class="nav-icon">🦐</span><span class="nav-text">Harvest</span>
-        </button>
-
         <div class="nav-group" id="treatmentGroup">
           <button type="button" class="nav-group-header" aria-expanded="false">
             <span class="nav-icon">🧪</span><span class="nav-text">Pond Care</span><span class="nav-caret">▾</span>
@@ -4468,6 +4486,14 @@ body.bc-return-modal-open{overflow:hidden!important}
             </button>
           </div>
         </div>
+
+        <button class="nav-item" data-route="harvest" type="button">
+          <span class="nav-icon">🦐</span><span class="nav-text">Harvest</span>
+        </button>
+
+        <button class="nav-item" data-route="harvestDecision" type="button">
+          <span class="nav-icon">🧮</span><span class="nav-text">Harvest Decision</span>
+        </button>
 
         <div class="sidebar-section-label">Operations</div>
         <div class="nav-group" id="logisticsGroup">
@@ -4840,7 +4866,7 @@ body.bc-return-modal-open{overflow:hidden!important}
                 </div>
                 <div class="form-group">
                   <label for="lastFeed">Previous Cumulative Feed (kg)</label>
-                  <input type="number" id="lastFeed" step="any" placeholder="0">
+                  <input type="number" id="lastFeed" step="any" placeholder="0" readonly>
                 </div>
                 <div class="form-group">
                   <label for="currentFeed">Current Cumulative Feed (kg)</label>
@@ -5030,6 +5056,43 @@ body.bc-return-modal-open{overflow:hidden!important}
           <div id="harvestRecordsList"></div>
         </section>
 
+        <!-- VIEW: POND HARVEST DECISION -->
+        <section id="harvestDecisionView" class="view">
+          <div class="hd-hero">
+            <div><h1>🧮 Pond Harvest Decision</h1><p>Estimate harvest revenue, current P/L and whether waiting is financially better.</p></div>
+            <div class="hd-badge">Selected Year • Crop</div>
+          </div>
+
+          <div class="hd-filter">
+            <label class="hd-field"><span>POND</span><select id="hdPondSelect"><option value="">Select Pond</option></select></label>
+          </div>
+
+          <div id="hdCurrentCards" class="hd-current"></div>
+          <div id="hdDecisionBanner" class="hd-decision"></div>
+
+          <div class="hd-table-card">
+            <div class="hd-table-head"><h2>Harvest Now vs Waiting</h2><p>Count is the market-size basis. ABW is linked automatically: ABW (g) = 1000 ÷ count (pcs/kg). Both Count and ABW remain editable for every future scenario.</p></div>
+            <div class="hd-table-wrap">
+              <table class="hd-table">
+                <thead><tr><th>Scenario</th><th>Count<br>(pcs/kg)</th><th>ABW<br>(g)</th><th>Survival<br>(%)</th><th>Biomass<br>(kg)</th><th>Price<br>(₹/kg)</th><th>Revenue</th><th>Feed / Day<br>(kg)</th><th>Extra Cost</th><th>Projected P/L</th><th>Profit %</th><th>Change vs Now</th></tr></thead>
+                <tbody id="hdScenarioBody"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="hd-note"><strong>How to use:</strong> Enter the market price for each expected count. For 7/14/21 days, edit either Count or ABW — the other value updates automatically. Count is always rounded to a whole number using normal half-up rounding (e.g. 40.49 → 40, 40.50 → 41). Projected P/L includes the pond's cost to date plus estimated future incremental feed cost. Profit % is calculated as projected P/L ÷ total projected pond cost × 100. Negative is red, 0–20% is yellow, and above 20% is green. “Change vs Now” isolates the financial benefit of waiting.</div>
+        </section>
+
+        <div id="hdBreakdownOverlay" class="hd-breakdown-overlay" aria-hidden="true">
+          <div class="hd-breakdown-dialog" role="dialog" aria-modal="true" aria-labelledby="hdBreakdownTitle">
+            <div class="hd-breakdown-head">
+              <div><h3 id="hdBreakdownTitle">Cost Breakdown</h3><p id="hdBreakdownSubtitle">Harvest Decision</p></div>
+              <button type="button" class="hd-breakdown-close" id="hdBreakdownClose" aria-label="Close">×</button>
+            </div>
+            <div class="hd-breakdown-body" id="hdBreakdownBody"></div>
+            <div class="hd-breakdown-foot">FIFO feed cost is the selected pond's actual FIFO cost/kg from Purchase lots and chronological Feed Entries.</div>
+          </div>
+        </div>
+
         <!-- VIEW 6: TREATMENT LOGS -->
         <section id="treatmentLogView" class="view">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;gap:1rem;">
@@ -5037,7 +5100,7 @@ body.bc-return-modal-open{overflow:hidden!important}
               <h2 class="sub-header-title" style="margin:0;">Treatment Logs</h2>
               <p style="margin:.25rem 0 0;color:#64748b;font-size:.82rem;">Review pond treatments, application history and treatment spend.</p>
             </div>
-            <button type="button" class="pill-btn action-blue" onclick="openTreatmentModal()">+ Add Treatment</button>
+            <button type="button" class="pill-btn action-blue" id="openTreatmentModalBtn">+ Add Treatment</button>
           </div>
           <div class="kpi-grid">
             <div class="kpi-card">
@@ -5074,31 +5137,93 @@ body.bc-return-modal-open{overflow:hidden!important}
           <div id="treatmentRecordsList" class="records-stack"></div>
         </section>
 
-        <!-- TREATMENT FORM: popup modal (no dedicated route/page) -->
-        <dialog id="treatmentModal" class="clinical-modal treatment-entry-modal" style="width:min(860px,94vw);max-height:92vh;border:0;border-radius:18px;padding:0;box-shadow:0 24px 70px rgba(15,23,42,.28);">
-          <div class="bc-treatment-modal-head">
-            <div>
-              <div class="bc-modal-eyebrow">POND CARE • TREATMENT</div>
-              <h2 id="treatmentSaveLabel">Record Pond Treatment</h2>
-              <p>Record fertilizer, mineral, medicine or probiotic application for the selected pond.</p>
-            </div>
-            <button type="button" onclick="closeTreatmentModal()" aria-label="Close" class="bc-modal-close">×</button>
-          </div>
-          <div style="padding:20px 22px 22px;overflow:auto;max-height:76vh;">
-            ${form}
-          </div>
-        </dialog>
+        <!-- TREATMENT FORM: standard popup modal -->
+        <div id="treatmentModal" class="modal-overlay" aria-hidden="true">
+          <div class="modal-card form-box" role="dialog" aria-modal="true" aria-labelledby="treatmentSaveLabel">
+            <button type="button" class="modal-close" onclick="closeTreatmentModal()" aria-label="Close">&times;</button>
+            <h2 id="treatmentSaveLabel">Record Pond Treatment</h2>
+            <p style="margin:-.55rem 0 1.15rem;color:#64748b;font-size:.82rem;line-height:1.45;">Record fertilizer, mineral, medicine or probiotic application for the selected pond.</p>
+            <form id="treatmentForm" novalidate>
+              <input type="hidden" id="treatmentId" value="">
 
-        
-<style id="supplement-track-header-match">
-#supplementTrackView .supplement-track-page-hero{display:flex;justify-content:space-between;align-items:center;gap:1rem;margin:0 0 1.25rem;padding:1.35rem 1.5rem;min-height:112px;box-sizing:border-box;border:1px solid #dbe5ef;border-radius:20px;background:linear-gradient(135deg,var(--bc-navy,#0f2742),var(--bc-teal,#155e75));color:#fff;box-shadow:0 12px 30px rgba(15,39,66,.14);position:relative;overflow:hidden}
-#supplementTrackView .supplement-track-page-hero:after{content:"";position:absolute;width:220px;height:220px;border-radius:50%;right:-70px;top:-120px;background:rgba(255,255,255,.08)}
-#supplementTrackView .supplement-track-page-hero>div:first-child{position:relative;z-index:1;min-width:0}
-#supplementTrackView .supplement-track-page-hero h2{margin:.25rem 0 .3rem;color:#fff;font-size:1.65rem;letter-spacing:-.02em}
-#supplementTrackView .supplement-track-page-hero p{margin:0;color:#dbeafe;font-size:.82rem}
-#supplementTrackView .supplement-track-page-hero .pond-page-actions{position:relative;z-index:1}
-@media(max-width:760px){#supplementTrackView .supplement-track-page-hero{align-items:flex-start;flex-direction:column;padding:1.2rem 1.1rem}#supplementTrackView .supplement-track-page-hero .pond-page-actions{width:100%;flex-wrap:wrap}}
-</style>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="treatmentPondSelect">Pond *</label>
+                  <select id="treatmentPondSelect" required></select>
+                </div>
+                <div class="form-group">
+                  <label for="treatmentDate">Treatment Date *</label>
+                  <input type="date" id="treatmentDate" required>
+                </div>
+                <div class="form-group">
+                  <label for="treatmentCategoryFilter">Category *</label>
+                  <select id="treatmentCategoryFilter" required>
+                    <option value="ALL">All Categories</option>
+                    <option value="Fertilizer">Fertilizer</option>
+                    <option value="Medicine">Medicine</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="treatmentTiming">Timing *</label>
+                  <select id="treatmentTiming" required>
+                    <option value="Morning">Morning</option>
+                    <option value="Afternoon">Afternoon</option>
+                    <option value="Evening">Evening</option>
+                    <option value="Night">Night</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group" style="position:relative;">
+                <label for="treatmentProductName">Product Name *</label>
+                <input type="text" id="treatmentProductName" required autocomplete="off" placeholder="Search fertilizer, medicine, mineral or probiotic">
+                <div id="treatmentProductSuggestions" class="autocomplete-list" hidden></div>
+              </div>
+
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="treatmentQty">Quantity / Dose *</label>
+                  <input type="number" id="treatmentQty" min="0.001" step="0.01" required placeholder="Enter quantity">
+                </div>
+                <div class="form-group">
+                  <label for="treatmentUnit">Unit *</label>
+                  <select id="treatmentUnit" required>
+                    <option value="Bag/Pkt">Bag/Pkt</option>
+                    <option value="Kg">Kg</option>
+                    <option value="Ltr">Ltr</option>
+                    <option value="gms">gms</option>
+                    <option value="ml">ml</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="preview-metrics-banner" style="margin:.5rem 0 1rem;">
+                <div class="banner-stat">
+                  <span>FIFO Rate</span>
+                  <strong id="previewTreatmentRate">—</strong>
+                </div>
+                <div class="banner-stat">
+                  <span>Available Stock</span>
+                  <strong id="previewTreatmentAvailableStock">—</strong>
+                </div>
+                <div class="banner-stat">
+                  <span>Estimated Cost</span>
+                  <strong id="previewTreatmentCost">₹0</strong>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="treatmentNotes">Notes</label>
+                <textarea id="treatmentNotes" rows="3" placeholder="Optional treatment notes / observations"></textarea>
+              </div>
+
+              <div class="form-actions-bar">
+                <button type="button" id="cancelTreatmentEdit" class="pill-btn secondary-btn" hidden>Cancel Edit</button>
+                <button type="submit" class="pill-btn action-blue"><span id="treatmentSubmitText">Record Pond Treatment</span></button>
+              </div>
+            </form>
+          </div>
+        </div>
 
         <!-- VIEW 7: SUPPLEMENT TRACK -->
         <section id="supplementTrackView" class="view">
@@ -6028,7 +6153,8 @@ const ROUTE_LABELS = {
   vendorList: 'Vendor List',
   inventory: 'Inventory',
   finance: 'Financial Overview',
-  ledger: 'Ledger'
+  ledger: 'Ledger',
+  harvestDecision: 'Harvest Decision'
 };
 
 const FEED_CODE_DIRECTORY = [
@@ -7151,6 +7277,12 @@ function loadAndEnsureData() {
               localStorage.setItem(STORAGE_KEYS.PONDS, JSON.stringify(ponds));
               renderGlobalCycleSelector();
               if (typeof renderAll === 'function') renderAll();
+              // If ponds arrive after harvests, retry reconciliation once the
+              // pond master is available so historical Full/Final Harvests lock.
+              if (typeof reconcileExisting === 'function') {
+                setTimeout(() => reconcileExisting(), 100);
+                setTimeout(() => reconcileExisting(), 1200);
+              }
           }, err => console.error("Firestore pond listener error:", err));
 
           db.collection('feeds').onSnapshot(snapshot => {
@@ -7214,6 +7346,9 @@ function loadAndEnsureData() {
             samples = cloudSamples;
             localStorage.setItem(STORAGE_KEYS.SAMPLES, JSON.stringify(samples));
             if (typeof renderAll === 'function') renderAll();
+            // Harvest Decision must immediately use the newly synced latest sampling
+            // for the selected pond. Do this after the sampling array is authoritative.
+            if (typeof hdRender === 'function') setTimeout(() => hdRender(), 0);
           }, err => console.error('Firestore sampling listener error:', err));
 
           // Mobile operational data sync: Treatment records contain application quantity
@@ -7309,6 +7444,13 @@ function loadAndEnsureData() {
               harvests = cloudHarvests;
               localStorage.setItem(STORAGE_KEYS.HARVESTS, JSON.stringify(harvests));
               if (typeof renderAll === 'function') renderAll();
+              // Existing Full/Final Harvest records must also reconcile to
+              // pond locks after Firebase harvest data has actually loaded.
+              // The old startup-only reconciliation could run too early.
+              if (typeof reconcileExisting === 'function') {
+                setTimeout(() => reconcileExisting(), 100);
+                setTimeout(() => reconcileExisting(), 1200);
+              }
           }, err => console.error("Firestore harvest listener error:", err));
       }
   } catch (err) {
@@ -9659,6 +9801,7 @@ function printVendorStatement() {
 /* Reusable title bands on operational pages */
 #feedView > .page-header-row,
 #historyView > .history-page-header,
+#treatmentLogView > div:first-child,
 #financeView > .finance-page-header,
 #ledgerView > .finance-page-header,
 #harvestView > div:first-child{
@@ -9679,6 +9822,7 @@ function printVendorStatement() {
 }
 #feedView > .page-header-row::after,
 #historyView > .history-page-header::after,
+#treatmentLogView > div:first-child::after,
 #financeView > .finance-page-header::after,
 #ledgerView > .finance-page-header::after,
 #harvestView > div:first-child::after{
@@ -9692,6 +9836,7 @@ function printVendorStatement() {
 }
 #feedView .sub-header-title,
 #historyView .sub-header-title,
+#treatmentLogView .sub-header-title,
 #financeView .finance-page-header h2,
 #ledgerView .finance-page-header h2,
 #harvestView > div:first-child .sub-header-title{
@@ -9705,6 +9850,7 @@ function printVendorStatement() {
 }
 #feedView .page-header-row small,
 #historyView .history-page-header small,
+#treatmentLogView > div:first-child p,
 #financeView .finance-page-header p,
 #ledgerView .finance-page-header p{
   position:relative;z-index:1;
@@ -9713,11 +9859,13 @@ function printVendorStatement() {
 }
 #feedView .page-header-row > div,
 #historyView .history-page-header > div,
+#treatmentLogView > div:first-child > div,
 #financeView .finance-page-header > div,
 #ledgerView .finance-page-header > div,
 #harvestView > div:first-child > h2{position:relative;z-index:1;}
 #feedView .page-header-row > button,
 #historyView .history-page-header > button,
+#treatmentLogView > div:first-child > button,
 #harvestView > div:first-child > button,
 #financeView .finance-overview-actions,
 #ledgerView .finance-page-header > span{
@@ -9826,16 +9974,21 @@ function printVendorStatement() {
   #summaryView::before,#treatmentLogView::before,#inventoryView::before{font-size:1.05rem;}
 }
 
-/* Treatment entry is popup-only from Treatment Logs; Supplement Track is a dedicated Pond Care analysis page. */
-#treatmentModal{overflow:hidden;}
-#treatmentModal::backdrop{background:rgba(15,39,66,.42);backdrop-filter:blur(2px);}
-.bc-treatment-modal-head{display:flex;justify-content:space-between;gap:1rem;align-items:flex-start;padding:20px 22px 18px;background:linear-gradient(135deg,#0f2742 0%,#123d62 58%,#176b67 100%);color:#fff;}
-.bc-treatment-modal-head h2{margin:.2rem 0 .25rem;color:#fff;font-size:1.35rem;font-weight:900;}
-.bc-treatment-modal-head p{margin:0;color:#cfe0eb;font-size:.78rem;}
-.bc-modal-eyebrow,.bc-page-eyebrow{font-size:.58rem;font-weight:850;letter-spacing:.12em;color:#b9d8e8;}
-.bc-modal-close{border:0;background:rgba(255,255,255,.14);color:#fff;width:38px;height:38px;border-radius:10px;font-size:1.35rem;cursor:pointer;}
-#treatmentModal .form-box{border:0;box-shadow:none;padding:0;margin:0;}
-#treatmentModal .form-box h2{display:none;}
+/* Treatment Logs uses the same hero header presentation as Sampling History. */
+#treatmentLogView > div:first-child > button{
+  background:#fff !important;
+  color:#0f4c81 !important;
+  border:0 !important;
+  border-radius:999px !important;
+  padding:.85rem 1.35rem !important;
+  font-weight:850 !important;
+  box-shadow:none !important;
+}
+#treatmentLogView > div:first-child > button:hover{
+  background:#f8fafc !important;
+}
+
+/* Treatment entry is popup-only from Treatment Logs; use the same standard modal pattern as Sample/Feed Entry. */
 .bc-supplement-page-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem;padding:1.25rem 1.5rem;border-radius:18px;background:linear-gradient(135deg,#0f2742 0%,#123d62 58%,#176b67 100%);color:#fff;box-shadow:0 10px 25px rgba(15,35,64,.10);}
 .bc-supplement-page-head h1{margin:.25rem 0 .2rem;font-size:1.45rem;font-weight:900;}
 .bc-supplement-page-head p{margin:0;color:#cfe0eb;font-size:.82rem;}
@@ -9994,9 +10147,15 @@ function setupEventListeners() {
     });
   }
 
-  [testWeightInput, shrimpCountInput, lastFeedInput, currentFeedInput, sampleDateInput].forEach(input => {
+  [testWeightInput, shrimpCountInput, currentFeedInput].forEach(input => {
     if (input) input.addEventListener('input', updateFormCalculations);
   });
+  if (sampleDateInput) {
+    sampleDateInput.addEventListener('change', () => {
+      autoPopulateLastFeed();
+      updateFormCalculations();
+    });
+  }
 
   if (pondLengthInput && pondBreadthInput) {
     [pondLengthInput, pondBreadthInput].forEach(input => {
@@ -10748,19 +10907,57 @@ function getHarvestPricePerKg(harvest) {
 }
 
 function autoPopulateLastFeed() {
-  if (!samplePondSelect) return;
-  const selectedPondId = samplePondSelect.value;
+  if (!samplePondSelect || !lastFeedInput) return;
+  const selectedPondId = String(samplePondSelect.value || '').trim();
   if (!selectedPondId) return;
 
-  const pondSamples = samples
-    .filter(s => s.pondId === selectedPondId && s.id !== (sampleIdInput ? sampleIdInput.value : ''))
-    .sort((a, b) => new Date(b.date) - new Date(a.date));
+  const pond = ponds.find(p => String(p.id) === selectedPondId);
+  const pondNameKey = String(pond?.name || '').trim().toLowerCase();
+  const pondIdKey = selectedPondId.toLowerCase();
+  const currentId = sampleIdInput ? String(sampleIdInput.value || '') : '';
+  const selectedDate = sampleDateInput ? sampleDateInput.value : '';
 
-  if (pondSamples.length > 0 && pondSamples[0].currentFeed !== null) {
-    lastFeedInput.value = pondSamples[0].currentFeed;
+  // Previous cumulative feed is derived from the immediately preceding
+  // sampling of the same logical pond and same Year/Crop cycle. Never use
+  // the record currently being edited, and never use a later-dated sample.
+  const dateKey = value => {
+    if (!value) return null;
+    const raw = String(value).trim();
+    const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m) return Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? null : Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+  };
+
+  const currentDateKey = dateKey(selectedDate);
+  const pondYear = Number(pond?.year || activeCycle?.year || 0);
+  const pondCrop = String(pond?.crop || activeCycle?.crop || '').trim().toLowerCase();
+
+  const isSamePond = s => {
+    const ref = String(s?.pondId || s?.pond || s?.pondName || '').trim().toLowerCase();
+    return ref === pondIdKey || (!!pondNameKey && ref === pondNameKey);
+  };
+  const isSameCycle = s => {
+    const y = Number(s?.year || s?.cropYear || 0);
+    const c = String(s?.crop || s?.cropCycle || '').trim().toLowerCase();
+    return (!y || !pondYear || y === pondYear) && (!c || !pondCrop || c === pondCrop);
+  };
+
+  const previousSamples = samples.filter(s => {
+    if (currentId && String(s?.id || '') === currentId) return false;
+    const sDateKey = dateKey(s?.date);
+    return isSamePond(s) && isSameCycle(s) &&
+      sDateKey !== null && currentDateKey !== null && sDateKey < currentDateKey;
+  }).sort((a, b) => dateKey(b?.date) - dateKey(a?.date));
+
+  const previous = previousSamples[0];
+  if (previous && previous.currentFeed !== null && previous.currentFeed !== undefined && previous.currentFeed !== '') {
+    lastFeedInput.value = Number(previous.currentFeed) || 0;
   } else {
     lastFeedInput.value = '0';
   }
+
+  updateFormCalculations();
 }
 
 function getExpectedFeedPer1Lakh(abw) {
@@ -10894,15 +11091,55 @@ function calculateMetrics(pondId, dateStr, testWeight, count, lastFeed, currentF
     doc = diff >= 0 ? diff : null;
   }
 
+  // Find the immediately preceding sample for the SAME pond and SAME crop cycle.
+  // Older records can contain pond name / legacy pond references instead of the
+  // current pondId, so match both forms. Date-only comparison avoids time-zone
+  // shifts changing a 4-day interval into an invalid/missing previous sample.
+  const pondNameKey = String(pond?.name || '').trim().toLowerCase();
+  const pondIdKey = String(pondId || '').trim().toLowerCase();
+  const pondYear = Number(pond?.year || 0);
+  const pondCrop = String(pond?.crop || '').trim().toLowerCase();
+
+  const sampleDateKey = (value) => {
+    if (!value) return null;
+    const raw = String(value).trim();
+    if (!raw) return null;
+    const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m) return Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return null;
+    return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+  };
+
+  const currentDateKey = sampleDateKey(dateStr);
+  const sameLogicalPond = (s) => {
+    const sPondId = String(s?.pondId || s?.pond || s?.pondName || '').trim().toLowerCase();
+    return !!sPondId && (sPondId === pondIdKey || (!!pondNameKey && sPondId === pondNameKey));
+  };
+
+  const sameCropCycle = (s) => {
+    const sYear = Number(s?.year || s?.cropYear || 0);
+    const sCrop = String(s?.crop || s?.cropCycle || '').trim().toLowerCase();
+    const yearMatches = !sYear || !pondYear || sYear === pondYear;
+    const cropMatches = !sCrop || !pondCrop || sCrop === pondCrop;
+    return yearMatches && cropMatches;
+  };
+
   const pondSamplesBefore = samples
-    .filter(s => String(s.pondId) === String(pondId) && s.id !== currentSampleId && new Date(s.date) < new Date(dateStr))
-    .sort((a, b) => new Date(a.date) - new Date(b.date));
+    .filter(s => {
+      if (s.id != null && currentSampleId != null && String(s.id) === String(currentSampleId)) return false;
+      const sDateKey = sampleDateKey(s?.date);
+      return sameLogicalPond(s) && sameCropCycle(s) && sDateKey !== null && currentDateKey !== null && sDateKey < currentDateKey;
+    })
+    .sort((a, b) => sampleDateKey(a?.date) - sampleDateKey(b?.date));
 
   let prevSample = null;
   let prevAbw = null;
   if (pondSamplesBefore.length > 0) {
     prevSample = pondSamplesBefore[pondSamplesBefore.length - 1];
-    prevAbw = (prevSample.testWeight && prevSample.count) ? (prevSample.testWeight / prevSample.count) : null;
+    const prevWeight = Number(prevSample.testWeight || prevSample.sampleWeight || 0);
+    const prevCount = Number(prevSample.count || 0);
+    prevAbw = (prevWeight > 0 && prevCount > 0) ? (prevWeight / prevCount) : null;
   }
 
   let growth = (abw > 0 && prevAbw !== null) ? (abw - prevAbw) : null;
@@ -10911,12 +11148,16 @@ function calculateMetrics(pondId, dateStr, testWeight, count, lastFeed, currentF
   const netFeed = cf - lf;
 
   let daysBetween = 7;
-  if (prevSample && prevSample.date && dateStr) {
-    const msGap = new Date(dateStr) - new Date(prevSample.date);
-    daysBetween = Math.max(1, Math.round(msGap / (1000 * 60 * 60 * 24)));
-  } else if (pond && pond.stockingDate && dateStr) {
-    const msFromStocking = new Date(dateStr) - new Date(pond.stockingDate);
-    daysBetween = Math.max(1, Math.round(msFromStocking / (1000 * 60 * 60 * 24)));
+  if (prevSample && currentDateKey !== null) {
+    const previousDateKey = sampleDateKey(prevSample.date);
+    if (previousDateKey !== null && currentDateKey > previousDateKey) {
+      daysBetween = Math.max(1, Math.round((currentDateKey - previousDateKey) / (1000 * 60 * 60 * 24)));
+    }
+  } else if (pond && pond.stockingDate && currentDateKey !== null) {
+    const stockingDateKey = sampleDateKey(pond.stockingDate);
+    if (stockingDateKey !== null && currentDateKey >= stockingDateKey) {
+      daysBetween = Math.max(1, Math.round((currentDateKey - stockingDateKey) / (1000 * 60 * 60 * 24)));
+    }
   }
 
   const weeklyAvgFeed = (netFeed > 0 && daysBetween > 0) ? (netFeed / daysBetween) : 0;
@@ -11192,8 +11433,11 @@ function editSample(id) {
   sampleDateInput.value = s.date;
   testWeightInput.value = s.testWeight;
   shrimpCountInput.value = s.count;
-  lastFeedInput.value = s.lastFeed !== undefined && s.lastFeed !== null ? s.lastFeed : 0;
+  // Rebuild Previous Cumulative Feed from the immediately preceding sample.
+  // This repairs older records that were saved before automatic lookup existed.
+  lastFeedInput.value = '0';
   currentFeedInput.value = s.currentFeed !== undefined && s.currentFeed !== null ? s.currentFeed : '';
+  autoPopulateLastFeed();
   sampleNotesInput.value = s.notes || '';
 
   cancelEditBtn.hidden = false;
@@ -11578,6 +11822,7 @@ function resetTreatmentForm() {
   if (treatmentUnitSelect) treatmentUnitSelect.value = 'Bag/Pkt';
   cancelTreatmentEditBtn.hidden = true;
   treatmentSaveLabel.textContent = 'Record Pond Treatment';
+  const treatmentSubmitText = document.getElementById('treatmentSubmitText'); if (treatmentSubmitText) treatmentSubmitText.textContent = 'Record Pond Treatment';
   if (treatmentProductSuggestions) treatmentProductSuggestions.hidden = true;
   updateTreatmentCalculations();
 }
@@ -11609,6 +11854,7 @@ function editTreatment(id) {
 
   cancelTreatmentEditBtn.hidden = false;
   treatmentSaveLabel.textContent = 'Edit Treatment Record';
+  const treatmentSubmitText = document.getElementById('treatmentSubmitText'); if (treatmentSubmitText) treatmentSubmitText.textContent = 'Edit Treatment Record';
   updateTreatmentCalculations();
   openTreatmentModal();
 }
@@ -11617,14 +11863,28 @@ function openTreatmentModal() {
   const modal = document.getElementById('treatmentModal');
   if (!modal) return;
   if (!treatmentIdInput.value) resetTreatmentForm();
-  if (modal.showModal) modal.showModal();
-  else modal.setAttribute('open','');
+  modal.classList.add('active');
+  modal.setAttribute('aria-hidden','false');
 }
 
 function closeTreatmentModal() {
   const modal = document.getElementById('treatmentModal');
-  if (modal?.open) modal.close();
+  if (!modal) return;
+  modal.classList.remove('active');
+  modal.setAttribute('aria-hidden','true');
 }
+
+
+// Standard modal behavior: close on backdrop click or Escape without changing treatment data logic.
+document.addEventListener('click', (e) => {
+  if (e.target?.id === 'treatmentModal') closeTreatmentModal();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    const modal = document.getElementById('treatmentModal');
+    if (modal?.classList.contains('active')) closeTreatmentModal();
+  }
+});
 
 function promptDeleteTreatment(id) {
   deleteTargetId = id;
@@ -12056,14 +12316,38 @@ function renderTreatmentLogs() {
         </div>
         ${t.notes ? `<div style="font-size:0.8rem; color:var(--text-muted); margin-top:0.5rem;">${escapeHtml(t.notes)}</div>` : ''}
         <div class="record-actions">
-          <button type="button" class="small-button" onclick="editTreatment('${t.id}')">Edit</button>
+          <button type="button" class="small-button" data-treatment-edit="${escapeHtml(String(t.id))}">Edit</button>
           <button type="button" class="small-button" style="color:var(--brand-red)" onclick="promptDeleteTreatment('${t.id}')">Delete</button>
         </div>
       </article>
     `;
   }).join('');
+  bindTreatmentLogActions();
 }
 
+
+
+// Surgical Treatment Log action bindings: explicit Add/Edit handlers only.
+function bindTreatmentLogActions(){
+  const addBtn=document.getElementById('openTreatmentModalBtn');
+  if(addBtn && !addBtn.dataset.bcBound){
+    addBtn.dataset.bcBound='1';
+    addBtn.addEventListener('click',()=>{ try{ openTreatmentModal(); }catch(err){ console.error('Open Treatment modal error:',err); } });
+  }
+  const list=document.getElementById('treatmentRecordsList');
+  if(list && !list.dataset.bcEditBound){
+    list.dataset.bcEditBound='1';
+    list.addEventListener('click',e=>{
+      const btn=e.target.closest('[data-treatment-edit]');
+      if(!btn)return;
+      e.preventDefault();
+      try{ editTreatment(btn.dataset.treatmentEdit); }catch(err){ console.error('Edit Treatment error:',err); }
+    });
+  }
+}
+window.openTreatmentModal=openTreatmentModal;
+window.editTreatment=editTreatment;
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bindTreatmentLogActions); else bindTreatmentLogActions();
 
 function renderFeedClosingAdjustmentModal() {
   const crop = document.getElementById('feedAdjustmentCrop')?.value || 'Crop 1';
@@ -15183,6 +15467,7 @@ function renderAll() {
   safeRun('renderLedgerEntries', renderLedgerEntries);
   safeRun('renderFinanceOverview', renderFinanceOverview);
   safeRun('renderPondwisePnl', renderPondwisePnl);
+  safeRun('hdRender', hdRender);
   safeRun('renderVendorMaster', renderVendorMaster);
   safeRun('updateFormCalculations', updateFormCalculations);
 }
@@ -15564,6 +15849,14 @@ function renderHarvestList() {
       pondTotalPieces += pieces;
 
       const isFinal = h.type === 'Full' || h.type === 'Final Harvest';
+      const lockCtx = typeof window.blueCrestGetHarvestLockContext === 'function'
+        ? window.blueCrestGetHarvestLockContext(h)
+        : {pondId:String(h.pondId||h.pond||h.pondName||group.pondObj?.id||''),cid:String(h.cycleId||activeCycle?.id||'')};
+      const harvestCycleId = String(lockCtx.cid || '');
+      const harvestPondId = String(lockCtx.pondId || '');
+      const harvestPondLocked = typeof window.blueCrestIsHarvestPondClosed === 'function'
+        ? window.blueCrestIsHarvestPondClosed(h)
+        : false;
       if (isFinal) {
         hasFull = true;
         if (h.feedConsumed != null && Number(h.feedConsumed) > 0) {
@@ -15596,8 +15889,11 @@ function renderHarvestList() {
             <div class="sample-value"><span>Rate</span><strong>₹${price.toFixed(2)}/kg</strong></div>
             <div class="sample-value"><span>Value</span><strong style="color:var(--brand-green);">₹${Math.round(val).toLocaleString()}</strong></div>
             <div style="margin-left:0.5rem; display:flex; gap:0.5rem; align-items:center;">
-              <button type="button" class="small-button" style="color:var(--brand-blue); font-weight:700;" onclick="editHarvest('${h.id}')">Edit</button>
-              <button type="button" class="small-button" style="color:var(--brand-red); font-weight:700;" onclick="promptDeleteHarvest('${h.id}')">Delete</button>
+              ${harvestPondLocked
+                ? `<button type="button" class="small-button" data-bc-harvest-reactivate="1" style="color:var(--brand-blue); font-weight:800;" onclick="window.blueCrestReactivatePond('${String(harvestPondId).replace(/'/g,"\\'")}', '${String(harvestCycleId).replace(/'/g,"\\'")}')">🔓 Reactivate Pond</button>`
+                : `<button type="button" class="small-button" style="color:var(--brand-blue); font-weight:700;" onclick="editHarvest('${h.id}')">Edit</button>
+                   <button type="button" class="small-button" style="color:var(--brand-red); font-weight:700;" onclick="promptDeleteHarvest('${h.id}')">Delete</button>`
+              }
             </div>
           </div>
         </div>
@@ -15736,14 +16032,24 @@ function calculateHarvestModalMetrics() {
 
 async function submitHarvestFormDirectly() {
   const pondId = document.getElementById('harvestPondSelect')?.value;
-  const pond = ponds.find(p => String(p.id) === String(pondId));
   const date = document.getElementById('harvestDate')?.value;
   const type = document.getElementById('harvestType')?.value;
+  const activeCycleId = cycleIdFor(activeCycle?.year, activeCycle?.crop);
+  const pond = ponds.find(p => {
+    if (String(p.id) !== String(pondId)) return false;
+    const py = Number(p.year || p.cropYear || activeCycle.year);
+    const pc = p.crop || p.cropCycle || activeCycle.crop;
+    return cycleIdFor(py, pc) === activeCycleId;
+  }) || ponds.find(p => String(p.id) === String(pondId));
   if (!pond) { alert('Please select a valid pond.'); return; }
-  const pondCycleId = pond.cycleId || cycleIdFor(pond.year || pond.cropYear || activeCycle.year, pond.crop || pond.cropCycle || activeCycle.crop);
-  if (pondCycleId !== activeCycle.id) { alert('Selected pond is not in the active Year/Crop cycle.'); return; }
-  const crop = pond.crop || pond.cropCycle || activeCycle.crop || 'Crop 1';
-  const year = Number(pond.year || pond.cropYear || activeCycle.year);
+  const pondYear = Number(pond.year || pond.cropYear || activeCycle.year);
+  const pondCrop = pond.crop || pond.cropCycle || activeCycle.crop;
+  const pondCycleId = cycleIdFor(pondYear, pondCrop);
+  if (pondCycleId !== activeCycleId) { alert('Selected pond is not in the active Year/Crop cycle.'); return; }
+  // Harvest belongs to the currently selected Year + Crop. Do not inherit a
+  // stale/malformed cycleId from an older pond record.
+  const crop = String(activeCycle.crop || pondCrop || 'Crop 1').trim();
+  const year = Number(activeCycle.year || pondYear);
   const weight = parseFloat(document.getElementById('harvestWeight')?.value) || 0;
   const count = parseFloat(document.getElementById('harvestCount')?.value) || 0;
   const price = parseFloat(document.getElementById('harvestPrice')?.value) || 0;
@@ -15752,6 +16058,7 @@ async function submitHarvestFormDirectly() {
 
   const newHarvest = {
     id: editId || `h_${Date.now()}`,
+    recordedAt: editId ? (harvests.find(h => String(h.id) === String(editId))?.recordedAt || new Date().toISOString()) : new Date().toISOString(),
     pondId,
     date,
     crop,
@@ -15781,6 +16088,29 @@ async function submitHarvestFormDirectly() {
       await db.collection('harvests').doc(newHarvest.id).set(newHarvest, { merge: true });
     }
     saveStorage();
+    // A Full/Final Harvest must immediately close the pond. Do this here,
+    // after the harvest has been successfully written, so the lock does not
+    // depend on the later wrapper/reconciliation timing.
+    if (['full', 'final harvest'].includes(String(type || '').trim().toLowerCase())) {
+      try {
+        // The lock system is loaded in a later script block. Wait briefly for
+        // its public bridge if the user submits immediately after page load.
+        let lockFn = window.blueCrestAutoCloseForHarvest;
+        for (let i = 0; !lockFn && i < 20; i++) {
+          await new Promise(resolve => setTimeout(resolve, 50));
+          lockFn = window.blueCrestAutoCloseForHarvest;
+        }
+        if (typeof lockFn !== 'function') throw new Error('Harvest lock system is not initialized');
+        // IMPORTANT: saving a Full/Final Harvest is itself a closure event.
+        // This applies to both a new Full/Final Harvest and an edit of an
+        // existing Full/Final Harvest after reactivation. Once the user saves
+        // the final-harvest record, the pond must be locked again.
+        await lockFn(newHarvest, {mode:'save', forceClose:true});
+      } catch (lockErr) {
+        console.error('Automatic pond lock after Full/Final Harvest failed:', lockErr);
+        alert('Harvest was saved, but the pond could not be locked automatically. Please check Firebase/cloud connection.');
+      }
+    }
     closeHarvestModal();
     renderAll();
   } catch (err) {
@@ -15793,12 +16123,37 @@ function editHarvest(id) {
   const h = harvests.find(item => String(item.id) === String(id));
   if (!h) { alert('Harvest record not found.'); return; }
 
-  const pondId = h.pondId || h.pond;
-  const pond = ponds.find(p => String(p.id) === String(pondId) || String(p.name || '').toLowerCase() === String(pondId || '').toLowerCase());
-  if (!pond) { alert('The pond linked to this harvest record could not be found.'); return; }
+  const pondId = h.pondId || h.pond || h.pondName;
 
-  const pondCycleId = pond.cycleId || cycleIdFor(pond.year || pond.cropYear || activeCycle.year, pond.crop || pond.cropCycle || activeCycle.crop);
-  if (pondCycleId !== activeCycle.id) { alert('This harvest belongs to a different Year/Crop cycle. Switch to that cycle before editing.'); return; }
+  // Determine the harvest's cycle from the harvest record first. Older
+  // records can have a stale/missing pond.cycleId, so editing must not reject
+  // a valid harvest merely because the pond master was later normalised.
+  const harvestYear = Number(h.year || h.cropYear || '');
+  const harvestCrop = String(h.crop || h.cropCycle || '').trim();
+  const storedHarvestCycleId = String(h.cycleId || '').trim().toLowerCase();
+  const derivedHarvestCycleId = harvestYear && harvestCrop ? cycleIdFor(harvestYear, harvestCrop) : '';
+  // Prefer explicit Year + Crop when present; otherwise use the stored cycle ID.
+  const harvestCycleId = derivedHarvestCycleId || storedHarvestCycleId;
+  const activeCycleId = cycleIdFor(activeCycle?.year, activeCycle?.crop);
+  if (harvestCycleId !== activeCycleId) {
+    alert(`This harvest belongs to ${harvestYear || 'another'} • ${harvestCrop || 'another crop'} cycle. Switch to that Year/Crop cycle before editing.`);
+    return;
+  }
+
+  // Resolve the pond inside the same cycle. Pond names/IDs may repeat across
+  // Crop 1 and Crop 2, so never take the first matching pond blindly.
+  const pondForHarvest = ponds.find(p => {
+    const sameRef = String(p.id) === String(pondId) || String(p.name || '').trim().toLowerCase() === String(pondId || '').trim().toLowerCase();
+    if (!sameRef) return false;
+    const py = Number(p.year || p.cropYear || harvestYear || activeCycle.year);
+    const pc = String(p.crop || p.cropCycle || harvestCrop || activeCycle.crop).trim();
+    return cycleIdFor(py, pc) === activeCycleId;
+  });
+  if (!pondForHarvest) { alert('The pond linked to this harvest record could not be found in this Year/Crop cycle.'); return; }
+  if (typeof window.blueCrestIsHarvestPondClosed === 'function' && window.blueCrestIsHarvestPondClosed(h)) {
+    alert(`🔒 Pond Closed\n\n${pondForHarvest.name||pondForHarvest.id} is closed after Full/Final Harvest. No new, edited, or deleted data can be entered until this pond is reactivated from the laptop.`);
+    return;
+  }
 
   openHarvestModal(String(h.id));
 
@@ -15806,9 +16161,9 @@ function editHarvest(id) {
     const el = document.getElementById(id);
     if (el) el.value = value ?? '';
   };
-  setValue('harvestPondSelect', pond.id);
+  setValue('harvestPondSelect', pondForHarvest.id);
   setValue('harvestDate', h.date || '');
-  setValue('harvestCrop', h.crop || pond.crop || activeCycle.crop || 'Crop 1');
+  setValue('harvestCrop', h.crop || pondForHarvest.crop || activeCycle.crop || 'Crop 1');
   setValue('harvestType', h.type || 'Partial');
   setValue('harvestWeight', h.biomass != null ? h.biomass : (h.weight || ''));
   setValue('harvestCount', h.count || '');
@@ -15820,6 +16175,12 @@ function editHarvest(id) {
 }
 
 function promptDeleteHarvest(id) {
+  const h = harvests.find(item => String(item.id) === String(id));
+  if (h && typeof window.blueCrestIsHarvestPondClosed === 'function' && window.blueCrestIsHarvestPondClosed(h)) {
+    const ctx = window.blueCrestGetHarvestLockContext ? window.blueCrestGetHarvestLockContext(h) : null;
+    alert(`🔒 Pond Closed\n\n${ctx?.pond?.name || ctx?.pondId || h.pondId || h.pond || 'This pond'} is closed after Full/Final Harvest. No new, edited, or deleted data can be entered until this pond is reactivated from the laptop.`);
+    return;
+  }
   deleteTargetId = id;
   deleteTargetType = 'harvest';
   dialogTitle.textContent = 'Delete harvest entry?';
@@ -16380,7 +16741,41 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   function pkey(c,p){ return `${String(c||'').trim()}__${String(p||'').trim()}`; }
   function pondIdOf(r){ return String(r?.pondId || r?.pond || r?.pondName || '').trim(); }
-  function isPondClosed(pid,cid){ return !!pondLocks[pkey(cid,pid)]?.closed; }
+  function lockMatches(r,cid,pid){ return String(r?.cycleId??'').trim().toLowerCase()===String(cid??'').trim().toLowerCase() && String(r?.pondId??'').trim().toLowerCase()===String(pid??'').trim().toLowerCase(); }
+  function lockEventTime(r){ const vals=[r?.reactivatedAt,r?.closedAt,r?.updatedAt].map(v=>v?new Date(v).getTime():0).filter(Number.isFinite); return vals.length?Math.max(...vals):0; }
+  function effectivePondLock(cid,pid){
+    const cc=canonicalCycleId(cid), pp=canonicalPondId(pid);
+    const matches=Object.values(pondLocks).filter(r=>lockMatches(r,cc,pp));
+    if(!matches.length) return null;
+    // Prefer the canonical lock document. Reactivation normalises all legacy
+    // records, so the canonical document is the single source of truth.
+    const canonical=matches.find(r=>String(r?.cycleId||'').trim().toLowerCase()===cc && String(r?.pondId||'').trim().toLowerCase()===pp && String(r?.id||'')===pkey(cc,pp));
+    if(canonical) return canonical;
+    matches.sort((a,b)=>lockEventTime(b)-lockEventTime(a));
+    return matches[0]||null;
+  }
+  function canonicalCycleId(cid){ return String(cid??'').trim().toLowerCase(); }
+  function canonicalPondId(pid){ return String(pid??'').trim().toLowerCase(); }
+  function isPondClosed(pid,cid){ return effectivePondLock(canonicalCycleId(cid),canonicalPondId(pid))?.closed===true; }
+  function harvestLockContext(h){
+    const pondRef=String(h?.pondId||h?.pond||h?.pondName||'').trim();
+    const hy=Number(h?.year||h?.cropYear||0);
+    const hc=String(h?.crop||h?.cropCycle||'').trim();
+    const cid=(hy&&hc&&typeof cycleIdFor==='function') ? String(cycleIdFor(hy,hc)).trim().toLowerCase() : canonicalCycleId(h?.cycleId||activeC().id);
+    let p=null;
+    const arr=typeof ponds!=='undefined'&&Array.isArray(ponds)?ponds:[];
+    p=arr.find(x=>{
+      const same=canonicalPondId(x?.id)===canonicalPondId(pondRef)||canonicalPondId(x?.name||x?.pondName)===canonicalPondId(pondRef);
+      if(!same)return false;
+      const py=Number(x?.year||x?.cropYear||hy||0),pc=String(x?.crop||x?.cropCycle||hc||'').trim();
+      const pcid=(py&&pc&&typeof cycleIdFor==='function')?canonicalCycleId(cycleIdFor(py,pc)):canonicalCycleId(x?.cycleId);
+      return pcid===cid;
+    }) || arr.find(x=>canonicalPondId(x?.id)===canonicalPondId(pondRef)||canonicalPondId(x?.name||x?.pondName)===canonicalPondId(pondRef));
+    return {pondRef,cid,pondId:p?.id||pondRef,pond:p};
+  }
+  window.blueCrestIsHarvestPondClosed=function(h){ const x=harvestLockContext(h); return isPondClosed(x.pondId,x.cid); };
+  window.blueCrestGetHarvestLockContext=function(h){ return harvestLockContext(h); };
+
   function isCropClosed(cid){ return !!cropLocks[String(cid)]?.closed; }
   function saveLocal(){ localStorage.setItem('bc_pondLocks',JSON.stringify(pondLocks)); localStorage.setItem('bc_cropLocks',JSON.stringify(cropLocks)); }
   function deny(msg){ alert(msg); return false; }
@@ -16393,45 +16788,174 @@ document.addEventListener('DOMContentLoaded', () => {
     if(pid && isPondClosed(pid,cid)) return deny(`🔒 Pond Closed\n\n${opts?.pondName || pid} is closed after Full/Final Harvest. No new, edited, or deleted data can be entered until this pond is reactivated from the laptop.`);
     return true;
   };
-  function getPond(pid){ return (typeof ponds!=='undefined' && Array.isArray(ponds)?ponds:[]).find(p=>String(p.id)===String(pid)||String(p.name||'').toLowerCase()===String(pid).toLowerCase()); }
-  function relevantPonds(c){
-    const arr=typeof ponds!=='undefined'&&Array.isArray(ponds)?ponds:[];
-    return arr.filter(p=>{
-      const pc=String(p.cycleId || (typeof cycleIdFor==='function'?cycleIdFor(p.year||p.cropYear,p.crop||p.cropCycle):''));
-      return pc===String(c.id);
-    });
+  function getPond(pid){ return (typeof ponds!=='undefined'&&Array.isArray(ponds)?ponds:[]).find(p=>String(p.id)===String(pid)||String(p.name||'').toLowerCase()===String(pid).toLowerCase()); }
+  function getPondForCycle(pid,cid){
+    const arr=typeof ponds!=='undefined'&&Array.isArray(ponds)?ponds:[]; const ref=String(pid??'').trim().toLowerCase(), target=String(cid??'').trim().toLowerCase();
+    return arr.find(p=>{ const sameRef=String(p.id??'').trim().toLowerCase()===ref||String(p.name??'').trim().toLowerCase()===ref; if(!sameRef)return false; const py=Number(p.year||p.cropYear||0),pc=String(p.crop||p.cropCycle||'').trim(); const pcid=py&&pc&&typeof cycleIdFor==='function'?String(cycleIdFor(py,pc)).trim().toLowerCase():String(p.cycleId||'').trim().toLowerCase(); return pcid===target; })||getPond(pid);
+  }
+  function harvestCycleId(h){
+    const hy=Number(h?.year||h?.cropYear||0);
+    const hc=String(h?.crop||h?.cropCycle||'').trim();
+    return (hy&&hc&&typeof cycleIdFor==='function') ? String(cycleIdFor(hy,hc)).trim() : String(h?.cycleId||'').trim();
+  }
+  function harvestRecordedAt(h){
+    if(h?.recordedAt) { const t=new Date(h.recordedAt).getTime(); if(Number.isFinite(t)) return t; }
+    if(h?.createdAt) { const t=new Date(h.createdAt).getTime(); if(Number.isFinite(t)) return t; }
+    const d=String(h?.date||'').trim();
+    if(d){ const t=new Date(`${d}T23:59:59`).getTime(); if(Number.isFinite(t)) return t; }
+    return 0;
   }
   function hasFullHarvest(p){
     const arr=typeof harvests!=='undefined'&&Array.isArray(harvests)?harvests:(typeof harvestEntries!=='undefined'&&Array.isArray(harvestEntries)?harvestEntries:[]);
-    return arr.some(h=>cycleOf(h)===String(p.cycleId) && pondIdOf(h)===String(p.id) && ['full','final harvest'].includes(String(h.type||h.harvestType||'').trim().toLowerCase()));
+    const pcid=String(p?.cycleId||cycleOf(p)).trim();
+    return arr.some(h=>harvestCycleId(h)===pcid && pondIdOf(h).toLowerCase()===String(p.id).toLowerCase() && ['full','final harvest'].includes(String(h.type||h.harvestType||'').trim().toLowerCase()));
   }
+  function fullHarvestIsSupersededByReactivation(p,cid,h){ const lock=effectivePondLock(cid,p.id); return !!(lock&&lock.closed===false&&lock.reactivatedAt); }
   async function cloudSet(col,id,data){ if(typeof db!=='undefined'&&db) await db.collection(col).doc(String(id)).set(data,{merge:true}); }
+  function bcEsc(v){ return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;').replace(/'/g,'&#39;'); }
+  function bcAuditDate(v){
+    if(!v) return '—';
+    const d=new Date(v);
+    if(Number.isNaN(d.getTime())) return bcEsc(v);
+    return d.toLocaleString([], {day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  }
+  function bcAuditActionLabel(a){
+    const map={POND_REACTIVATED:'🔓 Pond Reactivated',CROP_REACTIVATED:'🔓 Crop Reactivated',POND_CLOSED:'🔒 Pond Closed',CROP_CLOSED:'🔒 Crop Closed'};
+    return map[String(a||'')]||bcEsc(a||'Unknown');
+  }
+  function bcAuditScopeLabel(r){ return String(r?.scope||'').toLowerCase()==='pond'?'Pond':'Crop'; }
+  function bcAuditSubject(r){
+    if(String(r?.scope||'').toLowerCase()==='pond') return r?.pondName || r?.pondId || 'Pond';
+    return [r?.year,r?.crop].filter(Boolean).join(' • ') || 'Crop';
+  }
+  function ensureLockHistoryModal(){
+    if(document.getElementById('bcLockHistoryModal')) return document.getElementById('bcLockHistoryModal');
+    const m=document.createElement('div'); m.id='bcLockHistoryModal';
+    m.style.cssText='position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:99999;display:none;align-items:center;justify-content:center;padding:18px;box-sizing:border-box;';
+    m.innerHTML=`<div style="width:min(1050px,100%);max-height:90vh;background:#fff;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.25);display:flex;flex-direction:column;overflow:hidden;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;border-bottom:1px solid #e2e8f0;">
+        <div><div style="font-size:17px;font-weight:900;color:#0f172a;">🔓 Pond Reactivation History</div><div style="font-size:11px;color:#64748b;margin-top:3px;">Pond reactivation records are separated by Year and Crop. Select Crop 1 or Crop 2 to see only that crop's history.</div></div>
+        <button type="button" id="bcCloseLockHistory" style="border:0;background:#f1f5f9;color:#334155;border-radius:8px;padding:7px 10px;font-weight:900;cursor:pointer;">✕</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:10px 16px;border-bottom:1px solid #e2e8f0;background:#f8fafc;">
+        <div style="min-width:0;"><label for="bcAuditYearFilter" style="display:block;margin:0 0 4px;font-size:10px;font-weight:800;color:#475569;">Year</label><select id="bcAuditYearFilter" onchange="renderLockHistory()" style="width:100%;box-sizing:border-box;padding:7px 9px;border:1px solid #cbd5e1;border-radius:7px;background:#fff;font-size:12px;"><option value="all">All Years</option></select></div>
+        <div style="min-width:0;"><label for="bcAuditCropFilter" style="display:block;margin:0 0 4px;font-size:10px;font-weight:800;color:#475569;">Crop</label><select id="bcAuditCropFilter" onchange="renderLockHistory()" style="width:100%;box-sizing:border-box;padding:7px 9px;border:1px solid #cbd5e1;border-radius:7px;background:#fff;font-size:12px;"><option value="all">All Crops</option></select></div>
+        <div style="min-width:0;"><label for="bcAuditPondFilter" style="display:block;margin:0 0 4px;font-size:10px;font-weight:800;color:#475569;">Pond</label><select id="bcAuditPondFilter" onchange="renderLockHistory()" style="width:100%;box-sizing:border-box;padding:7px 9px;border:1px solid #cbd5e1;border-radius:7px;background:#fff;font-size:12px;"><option value="all">All Ponds</option></select></div>
+        <div style="display:flex;align-items:flex-end;min-width:0;"><button type="button" id="bcAuditRefresh" style="width:100%;box-sizing:border-box;padding:7px 10px;border:0;border-radius:7px;background:#334155;color:#fff;font-size:12px;font-weight:800;cursor:pointer;">↻ Refresh</button></div>
+      </div>
+      <style>
+        @media (max-width:700px){#bcLockHistoryModal [style*="grid-template-columns:repeat(4"]{grid-template-columns:repeat(2,minmax(0,1fr)) !important;}}
+        @media (max-width:420px){#bcLockHistoryModal [style*="grid-template-columns:repeat(4"]{grid-template-columns:1fr !important;}}
+      </style>
+      <div id="bcLockHistoryBody" style="overflow:auto;padding:0;"></div>
+    </div>`;
+    document.body.appendChild(m);
+    m.addEventListener('click',e=>{if(e.target===m)m.style.display='none';});
+    document.getElementById('bcCloseLockHistory')?.addEventListener('click',()=>m.style.display='none');
+    ['bcAuditYearFilter','bcAuditCropFilter','bcAuditPondFilter'].forEach(id=>document.getElementById(id)?.addEventListener('change',renderLockHistory));
+    document.getElementById('bcAuditRefresh')?.addEventListener('click',()=>loadLockHistory(true));
+    return m;
+  }
+  let bcAuditRecords=[];
+  function populateLockHistoryFilters(){
+    const pondReactivations=bcAuditRecords.filter(r=>String(r?.action||'').toUpperCase()==='POND_REACTIVATED');
+    const vals=(key)=>[...new Set(pondReactivations.map(r=>String(r?.[key]??'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
+    const fill=(id,items,label)=>{const el=document.getElementById(id);if(!el)return;const old=el.value;el.innerHTML=`<option value="all">${label}</option>`+items.map(x=>`<option value="${bcEsc(x)}">${bcEsc(x)}</option>`).join('');if(items.includes(old))el.value=old;};
+    fill('bcAuditYearFilter',vals('year'),'All Years'); fill('bcAuditCropFilter',vals('crop'),'All Crops'); fill('bcAuditPondFilter',vals('pondName'),'All Ponds');
+  }
+  function renderLockHistory(){
+    const body=document.getElementById('bcLockHistoryBody'); if(!body)return;
+    const year=String(document.getElementById('bcAuditYearFilter')?.value||'all').trim(),crop=String(document.getElementById('bcAuditCropFilter')?.value||'all').trim(),pond=String(document.getElementById('bcAuditPondFilter')?.value||'all').trim();
+    const rows=bcAuditRecords.filter(r=>{
+      if(String(r?.action||'').toUpperCase()!=='POND_REACTIVATED')return false;
+      const yearOk=year==='all'||String(r?.year??'').trim()===year;
+      const cropOk=crop==='all'||String(r?.crop??'').trim()===crop;
+      const pondName=String(r?.pondName??'').trim(),pondId=String(r?.pondId??'').trim();
+      const pondOk=pond==='all'||pondName===pond||pondId===pond;
+      return yearOk&&cropOk&&pondOk;
+    });
+    if(!rows.length){body.innerHTML='<div style="padding:30px;text-align:center;color:#64748b;font-size:13px;">No pond reactivation history found for the selected Year / Crop / Pond.</div>';return;}
+    body.innerHTML=`<div style="overflow:auto;"><table style="width:100%;border-collapse:collapse;min-width:720px;font-size:12px;"><thead><tr style="background:#f8fafc;position:sticky;top:0;z-index:1;"><th style="padding:9px 10px;text-align:left;border-bottom:1px solid #e2e8f0;">Date &amp; Time</th><th style="padding:9px 10px;text-align:left;border-bottom:1px solid #e2e8f0;">Pond</th><th style="padding:9px 10px;text-align:left;border-bottom:1px solid #e2e8f0;">Year • Crop</th><th style="padding:9px 10px;text-align:left;border-bottom:1px solid #e2e8f0;">Reason</th><th style="padding:9px 10px;text-align:left;border-bottom:1px solid #e2e8f0;">By</th></tr></thead><tbody>${rows.map(r=>`<tr><td style="padding:9px 10px;border-bottom:1px solid #f1f5f9;white-space:nowrap;">${bcAuditDate(r.timestamp)}</td><td style="padding:9px 10px;border-bottom:1px solid #f1f5f9;font-weight:800;">${bcEsc(r.pondName||r.pondId||'Pond')}</td><td style="padding:9px 10px;border-bottom:1px solid #f1f5f9;font-weight:700;">${bcEsc([r.year,r.crop].filter(Boolean).join(' • ')||'—')}</td><td style="padding:9px 10px;border-bottom:1px solid #f1f5f9;max-width:360px;white-space:normal;">${bcEsc(r.reason||'—')}</td><td style="padding:9px 10px;border-bottom:1px solid #f1f5f9;">${bcEsc(r.device||'—')}</td></tr>`).join('')}</tbody></table></div>`;
+  }
+  async function loadLockHistory(showLoading){
+    const body=document.getElementById('bcLockHistoryBody'); if(body&&showLoading) body.innerHTML='<div style="padding:30px;text-align:center;color:#64748b;font-size:13px;">Loading history…</div>';
+    if(typeof db==='undefined'||!db){if(body)body.innerHTML='<div style="padding:30px;text-align:center;color:#b91c1c;font-size:13px;">Cloud connection is not available.</div>';return;}
+    try{
+      const snap=await db.collection('lockAudit').get();
+      bcAuditRecords=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>String(b.timestamp||'').localeCompare(String(a.timestamp||'')));
+      populateLockHistoryFilters(); renderLockHistory();
+    }catch(e){console.error('Lock history load error:',e);if(body)body.innerHTML='<div style="padding:30px;text-align:center;color:#b91c1c;font-size:13px;">Could not load lock history. Check Firebase/cloud permissions.</div>';}
+  }
+  function openLockHistory(){
+    if(DEVICE!=='laptop'){alert('Lock & Reactivation History is available on the laptop.');return;}
+    const m=ensureLockHistoryModal();m.style.display='flex'; const c=activeC(); loadLockHistory(true).then(()=>{const y=document.getElementById('bcAuditYearFilter'),cr=document.getElementById('bcAuditCropFilter'); if(y&&c?.year&&[...y.options].some(o=>o.value===String(c.year))) y.value=String(c.year); if(cr&&c?.crop&&[...cr.options].some(o=>o.value===String(c.crop))) cr.value=String(c.crop); renderLockHistory();});
+  }
   async function writeAudit(action,r,reason){
     if(typeof db==='undefined'||!db) return;
     await db.collection('lockAudit').doc(`${Date.now()}_${Math.random().toString(36).slice(2,8)}`).set({action,scope:r.pondId?'pond':'crop',cycleId:r.cycleId,year:Number(r.year),crop:r.crop,pondId:r.pondId||null,pondName:r.pondName||null,reason,device:DEVICE,timestamp:todayIso()});
   }
-  async function closePond(p,reason){
-    const cid=String(p.cycleId || cycleOf(p)); const key=pkey(cid,p.id);
-    const rec={closed:true,cycleId:cid,year:Number(p.year||p.cropYear||activeC().year),crop:p.crop||p.cropCycle||activeC().crop,pondId:p.id,pondName:p.name||p.id,closedAt:todayIso(),closedBy:DEVICE,reason:reason||'Full/Final harvest recorded'};
-    pondLocks[key]=rec; saveLocal(); await cloudSet('pondLocks',key,rec);
+  async function closePond(p,reason,sourceHarvest,forceClose=false){
+    const rawCid=String(p.cycleId||cycleOf(p)).trim();
+    const cid=canonicalCycleId(rawCid),pid=canonicalPondId(p.id),key=pkey(cid,pid);
+    const makeRec=()=>({id:key,closed:true,cycleId:cid,year:Number(p.year||p.cropYear||activeC().year),crop:p.crop||p.cropCycle||activeC().crop,pondId:p.id,pondName:p.name||p.id,closedAt:todayIso(),closedBy:DEVICE,reason:reason||'Full/Final harvest recorded',closedByHarvestId:sourceHarvest?.id||null,updatedAt:todayIso()});
+    if(sourceHarvest&&typeof db!=='undefined'&&db){
+      let didClose=false;
+      await db.runTransaction(async tx=>{
+        const ref=db.collection('pondLocks').doc(String(key));
+        const snap=await tx.get(ref); const existing=snap.exists?snap.data():null;
+        if(!forceClose&&existing&&existing.closed===false&&existing.reactivatedAt){didClose=false;return;}
+        tx.set(ref,makeRec(),{merge:true}); didClose=true;
+      });
+      if(didClose){pondLocks[key]=makeRec();saveLocal();}
+      return didClose;
+    }
+    const rec=makeRec(); pondLocks[key]=rec;saveLocal();await cloudSet('pondLocks',key,rec);return true;
   }
   async function closeCrop(c,reason){
     const rec={closed:true,cycleId:String(c.id),year:Number(c.year),crop:c.crop,closedAt:todayIso(),closedBy:DEVICE,reason:reason||'All relevant ponds completed Full/Final Harvest'};
     cropLocks[String(c.id)]=rec; saveLocal(); await cloudSet('cropLocks',String(c.id),rec);
   }
-  async function autoCloseForHarvest(h){
-    const type=String(h?.type||h?.harvestType||'').trim().toLowerCase(); if(!['full','final harvest'].includes(type)) return;
-    const p=getPond(h.pondId||h.pond); if(!p) return;
-    const cid=String(h.cycleId || p.cycleId || cycleOf(p));
-    if(!isPondClosed(p.id,cid)) { await closePond({...p,cycleId:cid,crop:h.crop||p.crop,year:h.year||p.year},'Full/Final harvest recorded'); await writeAudit('POND_CLOSED',{cycleId:cid,year:h.year||p.year,crop:h.crop||p.crop,pondId:p.id,pondName:p.name},'Full/Final harvest recorded'); }
-    const c={id:cid,year:h.year||p.year||p.cropYear,crop:h.crop||p.crop||p.cropCycle};
+  async function autoCloseForHarvest(h,opts={}){
+    const type=String(h?.type||h?.harvestType||'').trim().toLowerCase();
+    if(!['full','final harvest'].includes(type)) return;
+
+    const ref=String(h?.pondId||h?.pond||h?.pondName||'').trim();
+    const hy=Number(h?.year||h?.cropYear||0);
+    const hc=String(h?.crop||h?.cropCycle||'').trim();
+    const cid=(hy&&hc) ? cycleIdFor(hy,hc) : String(h?.cycleId||'').trim().toLowerCase();
+    if(!cid) return;
+
+    const p=(typeof ponds!=='undefined'&&Array.isArray(ponds)?ponds:[]).find(x=>{
+      const sameRef=String(x.id)===ref || String(x.name||'').trim().toLowerCase()===ref.toLowerCase();
+      if(!sameRef) return false;
+      const py=Number(x.year||x.cropYear||hy||0);
+      const pc=String(x.crop||x.cropCycle||hc||'').trim();
+      return cycleIdFor(py,pc)===cid;
+    });
+    if(!p) { console.warn('Full/Final Harvest lock: matching pond not found', {harvest:h, cycleId:cid, pondRef:ref}); return; }
+
+    const currentLock=effectivePondLock(cid,p.id);
+    const forceClose=opts.mode==='save'&&opts.forceClose===true;
+    if(!forceClose&&currentLock&&currentLock.closed===false){ renderLockStatus(); return; }
+    if(!isPondClosed(p.id,cid)||forceClose){
+      const lockPond={...p,cycleId:cid,crop:hc||p.crop,year:hy||p.year};
+      const didClose=await closePond(lockPond,'Full/Final harvest recorded',h,forceClose);
+      if(didClose) await writeAudit('POND_CLOSED',{cycleId:cid,year:hy||p.year,crop:hc||p.crop,pondId:p.id,pondName:p.name},'Full/Final harvest recorded');
+    }
+    const c={id:cid,year:hy||p.year||p.cropYear,crop:hc||p.crop||p.cropCycle};
     const rel=relevantPonds(c);
-    if(rel.length && rel.every(x=>isPondClosed(x.id,cid)||hasFullHarvest(x)) && !isCropClosed(cid)){
-      for(const x of rel) if(!isPondClosed(x.id,cid)) await closePond(x,'Full/Final harvest recorded');
-      if(rel.every(x=>isPondClosed(x.id,cid))){ await closeCrop(c,'All ponds completed Full/Final Harvest'); await writeAudit('CROP_CLOSED',c,'All ponds completed Full/Final Harvest'); }
+    // A reactivated pond is genuinely open. Do not close it again merely
+    // because an old Full Harvest exists in history. Crop closure requires
+    // every relevant pond to be actually locked.
+    if(rel.length && rel.every(x=>isPondClosed(x.id,cid)) && !isCropClosed(cid)){
+      await closeCrop(c,'All ponds completed Full/Final Harvest');
+      await writeAudit('CROP_CLOSED',c,'All ponds completed Full/Final Harvest');
     }
     renderLockStatus();
   }
+  // Make the lock operation callable from the main harvest-save function.
+  // The lock system itself remains private; this is only a controlled bridge.
+  window.blueCrestAutoCloseForHarvest = autoCloseForHarvest;
   async function reconcileExisting(){
     const arr=typeof harvests!=='undefined'&&Array.isArray(harvests)?harvests:(typeof harvestEntries!=='undefined'&&Array.isArray(harvestEntries)?harvestEntries:[]);
     for(const h of arr){ try{ await autoCloseForHarvest(h); }catch(e){ console.error('Lock reconciliation error:',e); } }
@@ -16445,7 +16969,7 @@ document.addEventListener('DOMContentLoaded', () => {
       el=document.createElement('div'); el.id='bcLockStatusBar'; el.style.cssText='display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11px;font-weight:800;';
       anchor.parentNode.insertBefore(el,anchor.nextSibling);
     }
-    const closed=isCropClosed(c.id), rel=relevantPonds(c), done=rel.filter(p=>isPondClosed(p.id,c.id)||hasFullHarvest(p)).length;
+    const closed=isCropClosed(c.id), rel=(typeof getActivePonds==='function'?getActivePonds():relevantPonds(c)), done=rel.filter(p=>isPondClosed(p.id,c.id)).length;
     if(DEVICE==='mobile'){
       el.innerHTML=`<span style="padding:3px 7px;border-radius:999px;background:${closed?'#fee2e2':'#eff6ff'};color:${closed?'#991b1b':'#1d4ed8'};">${closed?'🔒 Crop Closed':'🔓 Crop Open'}${!closed&&rel.length?` • ${done}/${rel.length}`:''}</span>`;
     } else {
@@ -16453,7 +16977,7 @@ document.addEventListener('DOMContentLoaded', () => {
       (closed?`<button type="button" id="bcReactivateCrop" style="border:0;border-radius:7px;padding:5px 8px;background:#b91c1c;color:#fff;font-size:11px;font-weight:800;cursor:pointer">Reactivate Crop</button>`:`<button type="button" id="bcCloseCrop" ${rel.length&&done===rel.length?'':'disabled'} style="border:0;border-radius:7px;padding:5px 8px;background:#2563eb;color:#fff;font-size:11px;font-weight:800;cursor:pointer;opacity:${rel.length&&done===rel.length?'1':'.45'}">Close Crop</button>`)+
       `<button type="button" id="bcManagePondLocks" style="border:0;border-radius:7px;padding:5px 8px;background:#475569;color:#fff;font-size:11px;font-weight:800;cursor:pointer">Pond Locks</button>`;
       document.getElementById('bcCloseCrop')?.addEventListener('click',async()=>{
-        if(!rel.length||!rel.every(p=>isPondClosed(p.id,c.id)||hasFullHarvest(p))){alert('Complete Full/Final Harvest for every pond in this crop first.');return;}
+        if(!rel.length||!rel.every(p=>isPondClosed(p.id,c.id))){alert('All relevant ponds must be closed before the crop can be closed. A reactivated pond remains open until its next Full/Final Harvest.');return;}
         try{for(const p of rel)if(!isPondClosed(p.id,c.id))await closePond(p,'Closed after Full/Final Harvest');await closeCrop(c,'Closed after all relevant ponds completed Full/Final Harvest');await writeAudit('CROP_CLOSED',c,'Closed after all relevant ponds completed Full/Final Harvest');renderLockStatus();}catch(e){console.error(e);alert('Crop could not be closed. Check cloud connection.');}
       });
       document.getElementById('bcReactivateCrop')?.addEventListener('click',async()=>{
@@ -16474,23 +16998,41 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   function guardForm(id,resolver){ document.addEventListener('submit',e=>{if(e.target?.id!==id)return;const o=resolver()||{};if(!window.blueCrestAssertOperationalWrite(o)){e.preventDefault();e.stopImmediatePropagation();}},true); }
   function wrap(name,fn){const orig=window[name];if(typeof orig!=='function'||orig.__bcLockWrapped)return;const w=fn(orig);w.__bcLockWrapped=true;window[name]=w;}
-  async function reactivatePondById(pid){
-    const c=activeC();
-    const p=getPond(pid);
-    if(!p){alert('Pond not found in the active crop.');return;}
-    const cid=String(p.cycleId || c.id);
+  async function reactivatePondById(pid, requestedCycleId){
+    const c=activeC(),cid=String(requestedCycleId||c.id).trim(),p=getPondForCycle(pid,cid);
+    if(!p){alert('Pond not found in the selected Year/Crop cycle.');return;}
     if(!isPondClosed(p.id,cid)){alert(`${p.name||p.id} is already open.`);return;}
     if(DEVICE!=='laptop'){alert('Pond reactivation is available only on the laptop.');return;}
     if(!confirm(`Reactivate ${p.name||p.id}?`))return;
     const reason=prompt(`Mandatory reason for reactivating ${p.name||p.id}:`,'');
     if(!reason||!reason.trim()){alert('A reason is mandatory.');return;}
     try{
-      const key=pkey(cid,p.id),rec={...pondLocks[key],closed:false,reactivatedAt:todayIso(),reactivatedBy:DEVICE,reactivationReason:reason.trim()};
-      pondLocks[key]=rec;saveLocal();await cloudSet('pondLocks',key,rec);
+      const canonicalCid=canonicalCycleId(cid),canonicalPid=canonicalPondId(p.id),key=pkey(canonicalCid,canonicalPid),reactivationTime=todayIso();
+      // IMPORTANT: collapse every legacy/case-variant lock for this exact
+      // Pond + Year/Crop into ONE canonical OPEN record. This prevents an old
+      // closed duplicate from disagreeing with the edit/delete guard.
+      const rec={closed:false,cycleId:canonicalCid,pondId:p.id,pondName:p.name||p.id,year:Number(p.year||p.cropYear||c.year),crop:p.crop||p.cropCycle||c.crop,reactivatedAt:reactivationTime,reactivatedBy:DEVICE,reactivationReason:reason.trim(),updatedAt:reactivationTime};
+      if(db){
+        const snap=await db.collection('pondLocks').get();
+        const batch=db.batch();
+        snap.docs.forEach(d=>{
+          const r=d.data()||{};
+          if(lockMatches(r,canonicalCid,canonicalPid) && d.id!==key) batch.delete(d.ref);
+        });
+        batch.set(db.collection('pondLocks').doc(key),rec,{merge:true});
+        await batch.commit();
+      }
+      // Set local state only after the cloud write succeeds. The local object
+      // contains exactly one authoritative record for this pond/cycle.
+      pondLocks={...pondLocks};
+      Object.keys(pondLocks).forEach(k=>{if(lockMatches(pondLocks[k],canonicalCid,canonicalPid)&&k!==key)delete pondLocks[k];});
+      pondLocks[key]={id:key,...rec};
+      saveLocal();
       await writeAudit('POND_REACTIVATED',{...c,cycleId:cid,pondId:p.id,pondName:p.name,year:p.year||c.year,crop:p.crop||c.crop},reason.trim());
       renderLockStatus();
-      if(typeof renderPondList==='function') setTimeout(()=>renderPondList(),0);
-    }catch(e){console.error(e);alert('Pond reactivation failed. Check cloud connection.');}
+      if(typeof renderPondList==='function')setTimeout(()=>renderPondList(),0);
+      if(typeof renderHarvestList==='function')setTimeout(()=>renderHarvestList(),0);
+    }catch(e){console.error('Pond reactivation failed:',e);alert('Pond reactivation failed. Check cloud connection.');}
   }
   window.blueCrestReactivatePond=reactivatePondById;
   function decoratePondCards(){
@@ -16540,23 +17082,515 @@ document.addEventListener('DOMContentLoaded', () => {
       wrap('saveSamplingToDb',orig=>async function(obj){if(!window.blueCrestAssertOperationalWrite({pondId:obj?.pondId||obj?.pond,cycleId:cycleOf(obj)}))return;return orig.apply(this,arguments);});
       wrap('saveTreatmentToDb',orig=>async function(obj){if(!window.blueCrestAssertOperationalWrite({pondId:obj?.pondId||obj?.pond,cycleId:cycleOf(obj)}))return;return orig.apply(this,arguments);});
       wrap('saveHarvestToDb',orig=>async function(obj){if(!window.blueCrestAssertOperationalWrite({pondId:obj?.pondId||obj?.pond,cycleId:cycleOf(obj)}))return;const r=await orig.apply(this,arguments);await autoCloseForHarvest(obj);return r;});
-      ['deleteFeed','deleteSampling','deleteTreatment','deleteHarvest'].forEach(name=>wrap(name,orig=>function(id){const arr=name==='deleteFeed'?feedEntries:name==='deleteSampling'?samplingEntries:name==='deleteTreatment'?treatmentEntries:harvestEntries;const r=arr?.find(x=>String(x.id)===String(id)||String(x.firestoreId||'')===String(id)||String(x.legacyRecordId||'')===String(id));if(!window.blueCrestAssertOperationalWrite({pondId:pondIdOf(r),cycleId:cycleOf(r)}))return;return orig.apply(this,arguments);}));
+      ['deleteFeed','deleteSampling','deleteTreatment','deleteHarvest'].forEach(name=>wrap(name,orig=>function(id){const arr=name==='deleteFeed'?feedEntries:name==='deleteSampling'?samplingEntries:name==='deleteTreatment'?treatmentEntries:harvestEntries;const r=arr?.find(x=>String(x.id)===String(id)||String(x.firestoreId||'')===String(id)||String(x.legacyRecordId||'')===String(id));if(name==='deleteHarvest' && r && typeof window.blueCrestIsHarvestPondClosed==='function'){if(window.blueCrestIsHarvestPondClosed(r))return deny(`🔒 Pond Closed\n\nThis harvest belongs to a pond that is closed after Full/Final Harvest. Reactivate the pond from the laptop before editing or deleting.`);}else if(!window.blueCrestAssertOperationalWrite({pondId:pondIdOf(r),cycleId:cycleOf(r)}))return;return orig.apply(this,arguments);}));
     }
     ['promptDeleteSample','promptDeleteTreatment','promptDeleteHarvest','promptDeleteFeedRecord','promptDeletePond'].forEach(name=>wrap(name,orig=>function(id){const arr=name.includes('Sample')?samples:name.includes('Treatment')?treatments:name.includes('Harvest')?harvests:name.includes('Feed')?feedEntries:name.includes('Pond')?ponds:name.includes('Purchase')?purchases:stockReturns;const r=name.includes('Pond')?getPond(id):arr?.find(x=>String(x.id)===String(id)||String(x.firestoreId||'')===String(id)||String(x.legacyRecordId||'')===String(id));if(!window.blueCrestAssertOperationalWrite({pondId:name.includes('Pond')?id:pondIdOf(r),cycleId:cycleOf(r)}))return;return orig.apply(this,arguments);}));
-    ['editSample','editTreatment','editHarvest','editPond','editStockTransfer','editFeedRecord'].forEach(name=>wrap(name,orig=>function(id){const arr=name.includes('Sample')?samples:name.includes('Treatment')?treatments:name.includes('Harvest')?harvests:name.includes('Pond')?ponds:name.includes('Feed')?feedEntries:name.includes('StockTransfer')?stockTransfers:stockReturns;const r=name==='editPond'?getPond(id):arr?.find(x=>String(x.id)===String(id)||String(x.firestoreId||'')===String(id)||String(x.legacyRecordId||'')===String(id));if(!window.blueCrestAssertOperationalWrite({pondId:name==='editPond'?id:pondIdOf(r),cycleId:cycleOf(r)}))return;return orig.apply(this,arguments);}));
+    ['editSample','editTreatment','editHarvest','editPond','editStockTransfer','editFeedRecord'].forEach(name=>wrap(name,orig=>function(id){const arr=name.includes('Sample')?samples:name.includes('Treatment')?treatments:name.includes('Harvest')?harvests:name.includes('Pond')?ponds:name.includes('Feed')?feedEntries:name.includes('StockTransfer')?stockTransfers:stockReturns;const r=name==='editPond'?getPond(id):arr?.find(x=>String(x.id)===String(id)||String(x.firestoreId||'')===String(id)||String(x.legacyRecordId||'')===String(id));if(name==='editHarvest' && r && typeof window.blueCrestIsHarvestPondClosed==='function'){if(window.blueCrestIsHarvestPondClosed(r))return deny(`🔒 Pond Closed\n\nThis harvest belongs to a pond that is closed after Full/Final Harvest. Reactivate the pond from the laptop before editing or deleting.`);}else if(!window.blueCrestAssertOperationalWrite({pondId:name==='editPond'?id:pondIdOf(r),cycleId:cycleOf(r)}))return;return orig.apply(this,arguments);}));
     if(DEVICE==='laptop'){
-      wrap('submitHarvestFormDirectly',orig=>async function(){const pid=document.getElementById('harvestPondSelect')?.value;const type=document.getElementById('harvestType')?.value;const hid=document.getElementById('harvestId')?.value;if(!window.blueCrestAssertOperationalWrite({pondId:pid,cycleId:activeC().id}))return;const result=await orig.apply(this,arguments);const arr=typeof harvests!=='undefined'?harvests:[];const h=(hid&&arr.find(x=>String(x.id)===String(hid))) || (type?{pondId:pid,type,cycleId:activeC().id,year:activeC().year,crop:activeC().crop}:null);if(h&&['full','final harvest'].includes(String(h.type||'').toLowerCase())) await autoCloseForHarvest(h);return result;});
+      wrap('submitHarvestFormDirectly',orig=>async function(){const pid=document.getElementById('harvestPondSelect')?.value;if(!window.blueCrestAssertOperationalWrite({pondId:pid,cycleId:activeC().id}))return;return orig.apply(this,arguments);});
       wrap('saveStockTransfer',orig=>function(e){const from=document.getElementById('stockTransferFrom')?.value,to=document.getElementById('stockTransferTo')?.value;if(!window.blueCrestAssertOperationalWrite({pondId:from,cycleId:activeC().id})||!window.blueCrestAssertOperationalWrite({pondId:to,cycleId:activeC().id}))return;return orig.apply(this,arguments);});
       wrap('deleteStockTransfer',orig=>function(id){const r=(typeof stockTransfers!=='undefined'?stockTransfers:[]).find(x=>String(x.id)===String(id));const from=r?.fromPondId||r?.fromPond,to=r?.toPondId||r?.toPond;if(!window.blueCrestAssertOperationalWrite({pondId:from,cycleId:cycleOf(r)})||!window.blueCrestAssertOperationalWrite({pondId:to,cycleId:cycleOf(r)}))return;return orig.apply(this,arguments);});
     }
   }
   function init(){
     if(typeof db!=='undefined'&&db){
-      db.collection('pondLocks').onSnapshot(s=>{pondLocks={};s.docs.forEach(d=>pondLocks[d.id]={id:d.id,...d.data()});saveLocal();renderLockStatus();});
+      db.collection('pondLocks').onSnapshot(s=>{pondLocks={};s.docs.forEach(d=>pondLocks[d.id]={id:d.id,...d.data()});saveLocal();renderLockStatus();if(typeof renderPondList==='function')setTimeout(()=>renderPondList(),0);if(typeof renderHarvestList==='function')setTimeout(()=>renderHarvestList(),0);});
       db.collection('cropLocks').onSnapshot(s=>{cropLocks={};s.docs.forEach(d=>cropLocks[d.id]={id:d.id,...d.data()});saveLocal();renderLockStatus();});
     }
     installGuards(); wrap('renderPondList',orig=>function(){const r=orig.apply(this,arguments);setTimeout(decoratePondCards,0);return r;}); setTimeout(()=>{renderLockStatus();decoratePondCards();reconcileExisting();},900);
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
+</script>
+
+<script id="bluecrest-harvest-decision-js">
+let hdScenarioState = {};
+
+function hdRoundCount(value){
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  return Math.floor(n + 0.5);
+}
+function hdAbwFromCount(count){
+  const c = hdRoundCount(count);
+  return c > 0 ? 1000 / c : 0;
+}
+function hdCountFromAbw(abw){
+  const a = Number(abw);
+  return a > 0 ? hdRoundCount(1000 / a) : 0;
+}
+function hdResolveSamplePond(sample, activePonds){
+  if(!sample) return null;
+  const ref=String(sample.pondId||sample.pond||sample.pondName||'').trim().toLowerCase();
+  if(!ref) return null;
+  const list=Array.isArray(activePonds)?activePonds:[];
+  return list.find(p=>{
+    const id=String(p?.id||'').trim().toLowerCase();
+    const name=String(p?.name||p?.pondName||'').trim().toLowerCase();
+    if(ref===id||ref===name) return true;
+    // Legacy sample records often store P1/P2/P3 while Pond Setup stores an internal id.
+    if(name===ref) return true;
+    const tail=id.match(/(?:^|[_-])p([a-z0-9.-]+)$/i);
+    return !!tail && (`p${tail[1]}`).toLowerCase()===ref;
+  })||null;
+}
+function hdLatestSample(pondId){
+  // IMPORTANT: resolve samples against ponds in the CURRENT Year + Crop first.
+  // Do not use getPondwiseYear()/getPondwiseCrop() on a bare sample because legacy
+  // P1/P2/P3 references can match the wrong cycle when the same pond name exists
+  // in more than one crop.
+  const activePonds=getActivePonds();
+  const target=activePonds.find(p=>String(p.id)===String(pondId))||null;
+  if(!target) return null;
+  const rows=(Array.isArray(samples)?samples:[]).filter(s=>{
+    const resolved=hdResolveSamplePond(s,activePonds);
+    if(!resolved || String(resolved.id)!==String(target.id)) return false;
+    // If the sample itself carries an explicit cycle tag, honour it. Otherwise the
+    // selected active pond establishes the sample's Year/Crop context.
+    const explicitYear=Number(s.year||s.cropYear||0);
+    const explicitCrop=String(s.crop||s.cropCycle||'').trim();
+    if(explicitYear && explicitYear!==Number(activeCycle.year)) return false;
+    if(explicitCrop && pondwiseNormaliseCrop(explicitCrop)!==pondwiseNormaliseCrop(activeCycle.crop)) return false;
+    return true;
+  }).sort((a,b)=>{
+    const d=String(b.date||'').localeCompare(String(a.date||''));
+    return d!==0?d:String(b.id||'').localeCompare(String(a.id||''));
+  });
+  return rows[0]||null;
+}
+function hdPondCostToDate(pond){
+  const year=Number(activeCycle.year), crop=pondwiseNormaliseCrop(activeCycle.crop);
+  const scopedPonds=(Array.isArray(ponds)?ponds:[]).filter(p=>getPondwiseYear(p)===year&&pondwiseNormaliseCrop(p.crop||p.cropCycle)===crop);
+  const feed=getPondwiseFeedFifoCostDetails(pond.id,year,crop);
+  const treatment=(Array.isArray(treatments)?treatments:[]).filter(t=>String(t.pondId||t.pond||'')===String(pond.id)&&getPondwiseYear(t)===year&&pondwiseNormaliseCrop(t.crop)===crop).reduce((sum,t)=>sum+getPondwiseTreatmentCost(t,year,crop),0);
+  const supplement=getPondwiseSupplementCost(pond.id,year,crop);
+  const seed=getPondwiseSeedCost(pond);
+  const ledger=getPondwiseLedgerShare(year,crop,scopedPonds.length);
+  const physical=getPondPhysicalInventoryAdjustment(pond.id,year,crop);
+  return {total:feed.cost+treatment+supplement+seed+ledger+physical, feed:feed.cost||0, feedUnit:feed.unitPrice||0, feedQty:feed.usedQty||0, treatment, supplement, seed, ledger, physical};
+}
+function hdCurrentMetrics(pond){
+  const sample=hdLatestSample(pond.id);
+  if(!sample) return {sample:null,count:0,abw:0,survival:0,biomass:0,doc:null,dailyFeed:0};
+  const m=calculateMetrics(pond.id,sample.date,sample.testWeight,sample.count,sample.lastFeed,sample.currentFeed,sample.id);
+  // Sampling is the source of truth for the current position. Count is rounded
+  // to a whole market-size number; ABW is then derived from that rounded count.
+  const count=hdRoundCount(sample.count);
+  const abw=count>0?hdAbwFromCount(count):(Number(m.abw)||0);
+  const stocked=getPondwiseStockedPieces(pond);
+  const survival=Number(m.estSurvivalPct);
+  const safeSurvival=Number.isFinite(survival)?survival:0;
+  const biomass=stocked>0&&safeSurvival>0&&count>0?(stocked*safeSurvival/100)/count:0;
+  const expectedDaily=abw>0&&stocked>0?(getExpectedFeedPer1Lakh(abw)/100000)*stocked:0;
+  return {sample,count,abw,survival:safeSurvival,biomass,doc:m.doc,dailyFeed:Number(m.weeklyAvgFeed)||expectedDaily||0};
+}
+function hdDefaultPrice(pond){
+  const rows=(Array.isArray(harvests)?harvests:[]).filter(h=>{
+    const ref=String(h.pondId||h.pond||h.pondName||'').trim().toLowerCase();
+    return (ref===String(pond.id).trim().toLowerCase()||ref===String(pond.name||'').trim().toLowerCase())&&getPondwiseYear(h)===Number(activeCycle.year)&&pondwiseNormaliseCrop(h.crop)===pondwiseNormaliseCrop(activeCycle.crop);
+  }).sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));
+  return Number(rows[0]?.pricePerKg??rows[0]?.price??0)||0;
+}
+function hdProfitPct(profit, totalCost){
+  const c=Number(totalCost)||0;
+  if(c<=0) return null;
+  return (Number(profit)||0)/c*100;
+}
+function hdProfitClass(pct){
+  if(pct===null || !Number.isFinite(pct)) return 'hd-profit-neutral';
+  if(pct<0) return 'hd-bad';
+  if(pct<=20) return 'hd-warning';
+  return 'hd-good';
+}
+function hdDecisionStatus(pct){
+  if(pct===null || !Number.isFinite(pct)) return 'hd-status-yellow';
+  if(pct<0) return 'hd-status-red';
+  if(pct<=20) return 'hd-status-yellow';
+  return 'hd-status-green';
+}
+function hdProfitLabel(pct){
+  return pct===null || !Number.isFinite(pct) ? '—' : `${pct<0?'−':''}${Math.abs(pct).toFixed(1)}%`;
+}
+
+function hdCaptureScenarioInputs(){
+  const select=document.getElementById('hdPondSelect');
+  if(!select) return;
+  const pondId=String(select.value||'');
+  if(!pondId) return;
+  const key=String(activeCycle.id)+'__'+pondId;
+  const state=hdScenarioState[key];
+  if(!state) return;
+  document.querySelectorAll('#hdScenarioBody [data-hd-field]').forEach(el=>{
+    const days=Number(el.dataset.days);
+    const field=el.dataset.hdField;
+    if(!state[days]) state[days]={};
+    const raw=el.value;
+    if(raw==='') return;
+    const n=Number(raw);
+    if(!Number.isFinite(n)) return;
+    if(field==='count'){
+      state[days].count=hdRoundCount(n);
+      state[days].abw=hdAbwFromCount(state[days].count);
+    }else if(field==='abw'){
+      state[days].abw=n;
+      state[days].count=hdCountFromAbw(n);
+    }else if(field==='survival') state[days].survival=n;
+    else if(field==='price') state[days].price=n;
+    else if(field==='feedPerDay') state[days].feedPerDay=Math.round(n);
+    else if(field==='otherCost') state[days].otherCost=n;
+  });
+}
+
+function hdRender(){
+  hdCaptureScenarioInputs();
+  // Preserve the field that triggered a live recalculation. Rebuilding the table
+  // on every keystroke used to replace the input element and immediately steal
+  // focus, making Price/Count/ABW fields effectively impossible to type into.
+  const activeBefore=document.activeElement;
+  const restoreId=activeBefore?.id||'';
+  const restoreField=activeBefore?.dataset?.hdField||'';
+  const restoreDays=activeBefore?.dataset?.days||'';
+  const restoreStart=typeof activeBefore?.selectionStart==='number'?activeBefore.selectionStart:null;
+  const restoreEnd=typeof activeBefore?.selectionEnd==='number'?activeBefore.selectionEnd:null;
+  const select=document.getElementById('hdPondSelect'), cards=document.getElementById('hdCurrentCards'), banner=document.getElementById('hdDecisionBanner'), body=document.getElementById('hdScenarioBody');
+  if(!select||!cards||!banner||!body)return;
+  const activePonds=getActivePonds();
+  const previous=select.value;
+  select.innerHTML=activePonds.length?activePonds.map(p=>`<option value="${escapeHtml(String(p.id))}">${escapeHtml(getPondDisplayName(p))}</option>`).join(''):'<option value="">No active ponds</option>';
+  if(activePonds.some(p=>String(p.id)===String(previous)))select.value=previous;
+  else if(activePonds.length)select.value=String(activePonds[0].id);
+  const pond=activePonds.find(p=>String(p.id)===String(select.value));
+  if(!pond){cards.innerHTML='<div class="hd-empty" style="grid-column:1/-1">No active pond found for the selected Year / Crop.</div>';banner.innerHTML='';body.innerHTML='<tr><td colspan="11" class="hd-empty">No pond data available.</td></tr>';return;}
+  const key=String(activeCycle.id)+'__'+String(pond.id);
+  const cur=hdCurrentMetrics(pond);
+  const cost=hdPondCostToDate(pond);
+  // Harvest Now price is edited directly in the table. Keep one source of truth
+  // for today's market price: state[0].price.
+  const state=hdScenarioState[key] ||= {};
+  if(!state.base){state.base={count:cur.count,abw:cur.abw,survival:cur.survival};}
+  // Harvest Now is always a live reflection of the latest sampling.
+  // Preserve only its manually entered market price; Count, ABW and Survival
+  // must never remain stale when a newer sample is recorded.
+  const existingTodayPrice = Number(state[0]?.price);
+  state[0] = {
+    count: cur.count,
+    abw: cur.abw,
+    survival: cur.survival,
+    price: Number.isFinite(existingTodayPrice) ? existingTodayPrice : (hdDefaultPrice(pond)||0),
+    feedPerDay: Math.round(cur.dailyFeed||0),
+    otherCost: 0
+  };
+  const todayPrice=Number(state[0].price)||0;
+  const stocked=getPondwiseStockedPieces(pond);
+  cards.innerHTML=`
+    <div class="hd-card"><span>DOC</span><strong>${cur.doc??'—'} d</strong></div>
+    <div class="hd-card"><span>Current Count</span><strong>${cur.count?cur.count.toLocaleString('en-IN'):'—'} pcs/kg</strong><small>Market size</small></div>
+    <div class="hd-card"><span>Current ABW</span><strong>${cur.abw?cur.abw.toFixed(2):'—'} g</strong><small>1000 ÷ count</small></div>
+    <div class="hd-card"><span>Est. Survival</span><strong>${cur.survival?cur.survival.toFixed(1):'—'}%</strong></div>
+    <div class="hd-card"><span>Est. Biomass</span><strong>${cur.biomass?cur.biomass.toFixed(1):'—'} kg</strong><small>${stocked.toLocaleString('en-IN')} stocked pcs</small></div>
+    <div class="hd-card"><span>Cost to Date</span><strong>₹${Math.round(cost.total).toLocaleString('en-IN')}</strong><small>Used for projected P/L</small></div>`;
+  const scenarios=[{days:0,label:'Harvest Now'},{days:7,label:'+ 7 Days'},{days:14,label:'+ 14 Days'},{days:21,label:'+ 21 Days'}];
+  scenarios.forEach(sc=>{
+    if(!state[sc.days]){
+      state[sc.days]={count:cur.count,abw:cur.abw,survival:cur.survival,price:todayPrice,feedPerDay:Math.round(cur.dailyFeed||0),otherCost:0};
+    }
+    // Future survival is not a user assumption. Until another real sampling
+    // exists, Harvest Decision must carry forward the latest known survival.
+    state[sc.days].survival=cur.survival;
+    if(sc.days>0) state[sc.days].feedPerDay=Math.round(Number(state[sc.days].feedPerDay)||0);
+  });
+  // Harvest Now price is the editable Price cell in the Harvest Now row.
+  state[0].price=todayPrice;
+  const calc=(sc)=>{
+    const d=state[sc.days];
+    const c=hdRoundCount(d.count);
+    const abw=d.days===0?hdAbwFromCount(c):(d.abw>0?Number(d.abw):hdAbwFromCount(c));
+    const roundedCount=d.days===0?c:hdRoundCount(d.count);
+    const finalCount=roundedCount||hdCountFromAbw(abw);
+    const finalAbw=d.days===0?hdAbwFromCount(finalCount):abw;
+    // Survival is measured from sampling. For future scenarios there is no
+    // future sampling yet, so use the latest known survival unchanged.
+    const survival=Math.max(0,Math.min(120,Number(cur.survival)||0));
+    const biomass=stocked>0&&survival>0&&finalCount>0?(stocked*survival/100)/finalCount:0;
+    const revenue=biomass*(Number(d.price)||0);
+    const extraFeed=sc.days>0?(Number(d.feedPerDay)||0)*sc.days:0;
+    const extraCost=sc.days>0?(extraFeed*(cost.feedUnit||0)+(Number(d.otherCost)||0)):0;
+    const totalCost=cost.total+extraCost;
+    const profit=revenue-totalCost;
+    const profitPct=hdProfitPct(profit,totalCost);
+    return {...sc,count:finalCount,abw:finalAbw,survival,biomass,revenue,extraFeed,extraCost,totalCost,profit,profitPct,change:0};
+  };
+  const rows=scenarios.map(calc);
+  rows.forEach(r=>r.change=r.profit-rows[0].profit);
+  const best=rows.slice(1).reduce((a,b)=>b.profit>a.profit?b:a,rows[0]);
+  // Profit % is calculated as projected P/L divided by total projected pond cost (ROI on cost).
+  // Negative = red; 0% to 20% = yellow; above 20% = green.
+  const bestStatusClass = hdDecisionStatus(best.profitPct);
+  const nowStatusClass = hdDecisionStatus(rows[0].profitPct);
+  const bestIsProfitable = Number(best.profit) >= 0;
+  const nowIsProfitable = Number(rows[0].profit) >= 0;
+  if(best.days===0||best.change<=0){
+    const statusIcon = rows[0].profitPct!==null && rows[0].profitPct>20 ? '🟢' : (rows[0].profitPct!==null && rows[0].profitPct>=0 ? '🟡' : '🔴');
+    const statusTitle = nowIsProfitable ? 'Harvest Now is financially strongest' : 'Harvest Now is currently loss-making';
+    const statusText = nowIsProfitable
+      ? `Based on the current assumptions, waiting does not improve projected P/L versus harvesting now. Profit return on projected cost: ${hdProfitLabel(rows[0].profitPct)}.`
+      : `Based on the current assumptions, harvesting now is projected to result in a loss. Profit return on projected cost: ${hdProfitLabel(rows[0].profitPct)}.`;
+    banner.className=`hd-decision ${nowStatusClass}`;
+    banner.innerHTML=`<div class="hd-decision-main"><h3>${statusIcon} ${statusTitle}</h3><p>${statusText}</p></div><div class="hd-decision-value"><strong>₹${Math.round(rows[0].profit).toLocaleString('en-IN')} (${hdProfitLabel(rows[0].profitPct)})</strong><span>Estimated P/L if harvested now</span></div>`;
+  }else{
+    const statusIcon = best.profitPct!==null && best.profitPct>20 ? '🟢' : (best.profitPct!==null && best.profitPct>=0 ? '🟡' : '🔴');
+    const statusTitle = bestIsProfitable ? `Waiting ${best.days} days is currently stronger` : `Waiting ${best.days} days reduces the projected loss`;
+    const statusText = bestIsProfitable
+      ? `Under your editable assumptions, the best scenario improves projected P/L by ₹${Math.round(best.change).toLocaleString('en-IN')} versus harvesting now. Profit return on projected cost: ${hdProfitLabel(best.profitPct)}.`
+      : `Under your editable assumptions, the best scenario is still projected to lose money, but improves P/L by ₹${Math.round(best.change).toLocaleString('en-IN')} versus harvesting now. Profit return on projected cost: ${hdProfitLabel(best.profitPct)}.`;
+    banner.className=`hd-decision ${bestStatusClass}`;
+    banner.innerHTML=`<div class="hd-decision-main"><h3>${statusIcon} ${statusTitle}</h3><p>${statusText}</p></div><div class="hd-decision-value"><strong>+₹${Math.round(best.change).toLocaleString('en-IN')} (${hdProfitLabel(best.profitPct)})</strong><span>Expected improvement vs now</span></div>`;
+  }
+  body.innerHTML=rows.map(r=>{
+    const d=state[r.days];
+    const isBest=r.days===best.days&&r.days>0;
+    const rowClass=r.days===0?'hd-now':(isBest?'hd-best':'');
+    return `<tr class="${rowClass}">
+      <td><strong>${r.label}</strong>${isBest?'<div style="font-size:.58rem;color:#087443;font-weight:900">BEST PROJECTED</div>':''}<button type="button" class="hd-breakdown-btn" data-hd-breakdown="${r.days}">Cost Breakdown</button></td>
+      <td><input type="number" min="1" step="1" data-hd-field="count" data-days="${r.days}" value="${r.count||''}" ${r.days===0?'disabled':''}></td>
+      <td><input type="number" min="0.01" step="0.01" data-hd-field="abw" data-days="${r.days}" value="${r.abw?r.abw.toFixed(2):''}" ${r.days===0?'disabled':''}></td>
+      <td><input type="number" min="0" max="120" step="0.1" data-hd-field="survival" data-days="${r.days}" value="${r.survival?r.survival.toFixed(1):''}" disabled title="Uses latest sampling survival"></td>
+      <td class="hd-number"><strong>${r.biomass?r.biomass.toFixed(1):'—'}</strong></td>
+      <td><input type="number" min="0" step="0.01" data-hd-field="price" data-days="${r.days}" inputmode="decimal" value="${Number(d.price)||''}"></td>
+      <td class="hd-number"><strong>₹${Math.round(r.revenue).toLocaleString('en-IN')}</strong></td>
+      <td>${r.days===0?'<span class="hd-disabled-input">—</span>':`<input type="number" min="0" step="1" data-hd-field="feedPerDay" data-days="${r.days}" value="${r.days?Math.round(r.extraFeed/r.days):0}">`}</td>
+      <td>${r.days===0?'<span class="hd-disabled-input">—</span>':`<input type="number" min="0" step="1" data-hd-field="otherCost" data-days="${r.days}" value="${Number(d.otherCost)||0}">`}</td>
+      <td class="hd-profit ${hdProfitClass(r.profitPct)}">₹${Math.round(r.profit).toLocaleString('en-IN')}</td>
+      <td class="hd-profit ${hdProfitClass(r.profitPct)}">${hdProfitLabel(r.profitPct)}</td>
+      <td class="hd-profit ${r.change>=0?'hd-good':'hd-bad'}">${r.days===0?'—':(r.change>=0?'+':'−')+'₹'+Math.round(Math.abs(r.change)).toLocaleString('en-IN')}</td>
+    </tr>`;
+  }).join('');
+
+  // Restore focus/caret after the table is rebuilt so live calculations do not
+  // interrupt typing in editable scenario fields.
+  let restoreEl=null;
+  if(restoreId) restoreEl=document.getElementById(restoreId);
+  if(!restoreEl && restoreField) restoreEl=body.querySelector(`[data-hd-field=\"${restoreField}\"][data-days=\"${restoreDays}\"]`);
+  if(restoreEl){
+    restoreEl.focus();
+    try{
+      if(restoreStart!==null && restoreEnd!==null) restoreEl.setSelectionRange(restoreStart,restoreEnd);
+    }catch(e){}
+  }
+}
+
+function hdSyncFromField(el, rerender=true){
+  const select=document.getElementById('hdPondSelect'); if(!select)return;
+  const pond=ponds.find(p=>String(p.id)===String(select.value)); if(!pond)return;
+  const key=String(activeCycle.id)+'__'+String(pond.id); const state=hdScenarioState[key]||{};
+  const days=Number(el.dataset.days); const field=el.dataset.hdField; const d=state[days]; if(!d)return;
+  const n=Number(el.value);
+  if(field==='count'){
+    const c=hdRoundCount(n); d.count=c; d.abw=hdAbwFromCount(c);
+    // Update the linked ABW field immediately without rebuilding the table.
+    const abwEl=document.querySelector(`[data-hd-field=\"abw\"][data-days=\"${days}\"]`);
+    if(abwEl) abwEl.value=d.abw?d.abw.toFixed(2):'';
+  }
+  else if(field==='abw'){
+    const a=n>0?n:0; const c=hdCountFromAbw(a); d.count=c; d.abw=hdAbwFromCount(c);
+    const countEl=document.querySelector(`[data-hd-field=\"count\"][data-days=\"${days}\"]`);
+    if(countEl) countEl.value=d.count||'';
+  }
+  else if(field==='survival')d.survival=n;
+  else if(field==='price')d.price=n;
+  else if(field==='feedPerDay')d.feedPerDay=Math.round(n);
+  else if(field==='otherCost')d.otherCost=n;
+  if(rerender){
+    // Do not rebuild the table on blur/change. Rebuilding replaces the native
+    // number input and can cause browser change/focus behavior to discard the
+    // value the user just entered. The next pond/cycle render will pick the
+    // value from hdScenarioState.
+    hdRefreshDecisionCalculations();
+  }
+}
+
+function hdRefreshDecisionCalculations(){
+  const select=document.getElementById('hdPondSelect'), body=document.getElementById('hdScenarioBody');
+  if(!select||!body)return;
+  const activePonds=getActivePonds();
+  const pond=activePonds.find(p=>String(p.id)===String(select.value));
+  if(!pond)return;
+  const key=String(activeCycle.id)+'__'+String(pond.id);
+  const state=hdScenarioState[key];
+  if(!state)return;
+  const stocked=getPondwiseStockedPieces(pond);
+  const cost=hdPondCostToDate(pond);
+  const cur=hdCurrentMetrics(pond);
+  const scenarios=[{days:0,label:'Harvest Now'},{days:7,label:'+ 7 Days'},{days:14,label:'+ 14 Days'},{days:21,label:'+ 21 Days'}];
+  // Future survival remains equal to the latest actual sampling survival.
+  scenarios.forEach(sc=>{ if(state[sc.days]) state[sc.days].survival=cur.survival;
+    if(sc.days>0) state[sc.days].feedPerDay=Math.round(Number(state[sc.days].feedPerDay)||0); });
+  const calc=(sc)=>{
+    const d=state[sc.days]||{};
+    const c=hdRoundCount(d.count);
+    const abw=sc.days===0?hdAbwFromCount(c):(Number(d.abw)>0?Number(d.abw):hdAbwFromCount(c));
+    const finalCount=hdRoundCount(d.count)||hdCountFromAbw(abw);
+    const finalAbw=sc.days===0?hdAbwFromCount(finalCount):abw;
+    const survival=Math.max(0,Math.min(120,Number(cur.survival)||0));
+    const biomass=stocked>0&&survival>0&&finalCount>0?(stocked*survival/100)/finalCount:0;
+    const revenue=biomass*(Number(d.price)||0);
+    const extraFeed=sc.days>0?(Number(d.feedPerDay)||0)*sc.days:0;
+    const extraCost=sc.days>0?(extraFeed*(cost.feedUnit||0)+(Number(d.otherCost)||0)):0;
+    const totalCost=cost.total+extraCost;
+    const profit=revenue-totalCost;
+    return {...sc,count:finalCount,abw:finalAbw,survival,biomass,revenue,extraFeed,extraCost,totalCost,profit,profitPct:hdProfitPct(profit,totalCost)};
+  };
+  const rows=scenarios.map(calc);
+  rows.forEach(r=>r.change=r.profit-rows[0].profit);
+  const best=rows.slice(1).reduce((a,b)=>b.profit>a.profit?b:a,rows[0]);
+  // Update only calculated cells and the decision banner; leave all input
+  // elements untouched so entered prices remain visible.
+  rows.forEach((r,i)=>{
+    const tr=body.querySelectorAll('tr')[i]; if(!tr)return;
+    const cells=tr.querySelectorAll('td');
+    if(cells[4])cells[4].innerHTML=`<strong>${r.biomass?r.biomass.toFixed(1):'—'}</strong>`;
+    if(cells[6])cells[6].innerHTML=`<strong>₹${Math.round(r.revenue).toLocaleString('en-IN')}</strong>`;
+    if(cells[9]){cells[9].className=`hd-profit ${hdProfitClass(r.profitPct)}`;cells[9].textContent=`₹${Math.round(r.profit).toLocaleString('en-IN')}`;}
+    if(cells[10]){cells[10].className=`hd-profit ${hdProfitClass(r.profitPct)}`;cells[10].textContent=hdProfitLabel(r.profitPct);}
+    if(cells[11]){cells[11].className=`hd-profit ${r.change>=0?'hd-good':'hd-bad'}`;cells[11].textContent=r.days===0?'—':(r.change>=0?'+':'−')+'₹'+Math.round(Math.abs(r.change)).toLocaleString('en-IN');}
+  });
+  const banner=document.getElementById('hdDecisionBanner');
+  if(!banner)return;
+  if(best.days===0||best.change<=0){
+    const statusIcon=rows[0].profitPct!==null&&rows[0].profitPct>20?'🟢':(rows[0].profitPct!==null&&rows[0].profitPct>=0?'🟡':'🔴');
+    const title=rows[0].profit>=0?'Harvest Now is financially strongest':'Harvest Now is currently loss-making';
+    const text=rows[0].profit>=0?`Based on the current assumptions, waiting does not improve projected P/L versus harvesting now. Profit return on projected cost: ${hdProfitLabel(rows[0].profitPct)}.`:`Based on the current assumptions, harvesting now is projected to result in a loss. Profit return on projected cost: ${hdProfitLabel(rows[0].profitPct)}.`;
+    banner.className=`hd-decision ${hdDecisionStatus(rows[0].profitPct)}`;
+    banner.innerHTML=`<div class=\"hd-decision-main\"><h3>${statusIcon} ${title}</h3><p>${text}</p></div><div class=\"hd-decision-value\"><strong>₹${Math.round(rows[0].profit).toLocaleString('en-IN')} (${hdProfitLabel(rows[0].profitPct)})</strong><span>Estimated P/L if harvested now</span></div>`;
+  }else{
+    const statusIcon=best.profitPct!==null&&best.profitPct>20?'🟢':(best.profitPct!==null&&best.profitPct>=0?'🟡':'🔴');
+    const title=best.profit>=0?`Waiting ${best.days} days is currently stronger`:`Waiting ${best.days} days reduces the projected loss`;
+    const text=best.profit>=0?`Under your editable assumptions, the best scenario improves projected P/L by ₹${Math.round(best.change).toLocaleString('en-IN')} versus harvesting now. Profit return on projected cost: ${hdProfitLabel(best.profitPct)}.`:`Under your editable assumptions, the best scenario is still projected to lose money, but improves P/L by ₹${Math.round(best.change).toLocaleString('en-IN')} versus harvesting now. Profit return on projected cost: ${hdProfitLabel(best.profitPct)}.`;
+    banner.className=`hd-decision ${hdDecisionStatus(best.profitPct)}`;
+    banner.innerHTML=`<div class=\"hd-decision-main\"><h3>${statusIcon} ${title}</h3><p>${text}</p></div><div class=\"hd-decision-value\"><strong>+₹${Math.round(best.change).toLocaleString('en-IN')} (${hdProfitLabel(best.profitPct)})</strong><span>Expected improvement vs now</span></div>`;
+  }
+}
+
+function hdOpenBreakdown(days){
+  hdCaptureScenarioInputs();
+  const select=document.getElementById('hdPondSelect');
+  const overlay=document.getElementById('hdBreakdownOverlay');
+  const body=document.getElementById('hdBreakdownBody');
+  const title=document.getElementById('hdBreakdownTitle');
+  const subtitle=document.getElementById('hdBreakdownSubtitle');
+  if(!select||!overlay||!body)return;
+  const pond=getActivePonds().find(p=>String(p.id)===String(select.value));
+  if(!pond)return;
+  const key=String(activeCycle.id)+'__'+String(pond.id);
+  const state=hdScenarioState[key]||{};
+  const d=state[Number(days)]||{};
+  const cost=hdPondCostToDate(pond);
+  const cur=hdCurrentMetrics(pond);
+  const stocked=getPondwiseStockedPieces(pond);
+  const scenarioDays=Number(days)||0;
+  const count=hdRoundCount(d.count);
+  const abw=scenarioDays===0?hdAbwFromCount(count):(Number(d.abw)>0?Number(d.abw):hdAbwFromCount(count));
+  const finalCount=scenarioDays===0?count:(hdRoundCount(d.count)||hdCountFromAbw(abw));
+  const finalAbw=scenarioDays===0?hdAbwFromCount(finalCount):abw;
+  const survival=Math.max(0,Math.min(120,Number(cur.survival)||0));
+  const biomass=stocked>0&&survival>0&&finalCount>0?(stocked*survival/100)/finalCount:0;
+  const price=Number(d.price)||0;
+  const revenue=biomass*price;
+  const feedPerDay=scenarioDays>0?Math.round(Number(d.feedPerDay)||0):0;
+  const extraFeed=scenarioDays>0?feedPerDay*scenarioDays:0;
+  const extraFeedCost=scenarioDays>0?extraFeed*(cost.feedUnit||0):0;
+  const otherCost=scenarioDays>0?(Number(d.otherCost)||0):0;
+  const extraCost=extraFeedCost+otherCost;
+  const totalCost=cost.total+extraCost;
+  const profit=revenue-totalCost;
+  const profitPct=hdProfitPct(profit,totalCost);
+  const label=scenarioDays===0?'Harvest Now':`+ ${scenarioDays} Days`;
+  if(title)title.textContent=`${label} — Cost Breakdown`;
+  if(subtitle)subtitle.textContent=`${getPondDisplayName(pond)} • ${activeCycle.year} • ${activeCycle.crop}`;
+  const money=n=>`₹${Math.round(Number(n)||0).toLocaleString('en-IN')}`;
+  body.innerHTML=`
+    <div class="hd-breakdown-section">
+      <h4>Current Cost to Date</h4>
+      <div class="hd-breakdown-row"><span>Feed cost (FIFO)</span><strong>${money(cost.feed)}</strong></div>
+      <div class="hd-breakdown-row"><span>Treatment cost</span><strong>${money(cost.treatment)}</strong></div>
+      <div class="hd-breakdown-row"><span>Feed supplements</span><strong>${money(cost.supplement)}</strong></div>
+      <div class="hd-breakdown-row"><span>Seed cost</span><strong>${money(cost.seed)}</strong></div>
+      <div class="hd-breakdown-row"><span>Ledger share</span><strong>${money(cost.ledger)}</strong></div>
+      <div class="hd-breakdown-row"><span>Physical inventory adjustment</span><strong>${money(cost.physical)}</strong></div>
+      <div class="hd-breakdown-row hd-breakdown-total"><span><strong>Cost to Date</strong></span><strong>${money(cost.total)}</strong></div>
+    </div>
+    <div class="hd-breakdown-section">
+      <h4>${label} Projection</h4>
+      <div class="hd-breakdown-row"><span>Projected biomass</span><strong>${biomass.toFixed(1)} kg</strong></div>
+      <div class="hd-breakdown-row"><span>Market price</span><strong>${money(price)}/kg</strong></div>
+      <div class="hd-breakdown-row"><span>Projected revenue</span><strong>${money(revenue)}</strong></div>
+      ${scenarioDays>0?`<div class="hd-breakdown-row"><span>Feed / Day</span><strong>${feedPerDay.toLocaleString('en-IN')} kg</strong></div>
+      <div class="hd-breakdown-row"><span>Days waiting</span><strong>${scenarioDays} days</strong></div>
+      <div class="hd-breakdown-row"><span>Additional feed</span><strong>${extraFeed.toLocaleString('en-IN')} kg</strong></div>
+      <div class="hd-breakdown-row"><span>FIFO feed cost</span><strong>${money(cost.feedUnit)}/kg</strong></div>
+      <div class="hd-breakdown-row"><span>Additional feed cost</span><strong>${money(extraFeedCost)}</strong></div>
+      <div class="hd-breakdown-row"><span>Extra cost entered</span><strong>${money(otherCost)}</strong></div>`:''}
+      <div class="hd-breakdown-row"><span>Total additional cost</span><strong>${money(extraCost)}</strong></div>
+      <div class="hd-breakdown-row hd-breakdown-total"><span><strong>Total projected cost</strong></span><strong>${money(totalCost)}</strong></div>
+    </div>
+    <div class="hd-breakdown-section">
+      <h4>Result</h4>
+      <div class="hd-breakdown-row"><span>Projected revenue</span><strong>${money(revenue)}</strong></div>
+      <div class="hd-breakdown-row"><span>Total projected cost</span><strong>${money(totalCost)}</strong></div>
+      <div class="hd-breakdown-row hd-breakdown-total"><span><strong>Projected P/L</strong></span><strong>${money(profit)}</strong></div>
+      <div class="hd-breakdown-row"><span>Profit % (P/L ÷ total cost × 100)</span><strong>${hdProfitLabel(profitPct)}</strong></div>
+    </div>
+    <div class="hd-breakdown-formula"><strong>Projection logic:</strong> ${money(revenue)} revenue − ${money(totalCost)} total projected cost = ${money(profit)} projected P/L.</div>`;
+  overlay.classList.add('open'); overlay.setAttribute('aria-hidden','false');
+}
+function hdCloseBreakdown(){
+  const overlay=document.getElementById('hdBreakdownOverlay');
+  if(overlay){overlay.classList.remove('open');overlay.setAttribute('aria-hidden','true');}
+}
+
+function initHarvestDecision(){
+  const select=document.getElementById('hdPondSelect');
+  if(!select||select.dataset.hdBound)return;
+  select.dataset.hdBound='1'; select.addEventListener('change',()=>hdRender());
+  const hdView=document.getElementById('harvestDecisionView');
+  if(hdView && !hdView.dataset.hdInputBound){
+    hdView.dataset.hdInputBound='1';
+    hdView.addEventListener('input',e=>{
+      if(!e.target.matches('[data-hd-field]')) return;
+      // Update state and calculated cells in place. Inputs are never replaced
+      // while the user is typing, so Price remains fully editable.
+      hdSyncFromField(e.target, true);
+    });
+    hdView.addEventListener('change',e=>{
+      if(!e.target.matches('[data-hd-field]')) return;
+      hdSyncFromField(e.target, true);
+    });
+    hdView.addEventListener('blur',e=>{
+      if(!e.target.matches('[data-hd-field]')) return;
+      hdSyncFromField(e.target, true);
+    },true);
+  }
+  const breakdownOverlay=document.getElementById('hdBreakdownOverlay');
+  const breakdownClose=document.getElementById('hdBreakdownClose');
+  if(breakdownClose && !breakdownClose.dataset.bound){
+    breakdownClose.dataset.bound='1';
+    breakdownClose.addEventListener('click',hdCloseBreakdown);
+  }
+  if(breakdownOverlay && !breakdownOverlay.dataset.bound){
+    breakdownOverlay.dataset.bound='1';
+    breakdownOverlay.addEventListener('click',e=>{if(e.target===breakdownOverlay)hdCloseBreakdown();});
+  }
+  if(hdView && !hdView.dataset.hdBreakdownBound){
+    hdView.dataset.hdBreakdownBound='1';
+    hdView.addEventListener('click',e=>{
+      const btn=e.target.closest('[data-hd-breakdown]');
+      if(!btn)return;
+      e.preventDefault();
+      hdOpenBreakdown(Number(btn.dataset.hdBreakdown));
+    });
+  }
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')hdCloseBreakdown();});
+  hdRender();
+}
+document.addEventListener('DOMContentLoaded', initHarvestDecision);
 </script>
