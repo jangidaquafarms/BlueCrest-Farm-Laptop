@@ -8109,6 +8109,14 @@ async function pullFarmFromCloud() {
   return restored;
 }
 
+function firestoreSafeValue(value) {
+  try {
+    return JSON.parse(JSON.stringify(value));
+  } catch (e) {
+    return value;
+  }
+}
+
 async function pushFarmToCloud() {
   if (typeof db === 'undefined' || !db) return;
   const slices = getFarmBackupSlices();
@@ -8124,11 +8132,12 @@ async function pushFarmToCloud() {
   for (let i = 0; i < writes.length; i += 400) {
     const batch = db.batch();
     writes.slice(i, i + 400).forEach(({ name, value }) => {
-      batch.set(db.collection('farmBackup').doc(name), {
-        items: value,
-        updatedAt: new Date().toISOString(),
-        count: Array.isArray(value) ? value.length : undefined
-      }, { merge: true });
+      const payload = {
+        items: firestoreSafeValue(value),
+        updatedAt: new Date().toISOString()
+      };
+      if (Array.isArray(value)) payload.count = value.length;
+      batch.set(db.collection('farmBackup').doc(name), payload, { merge: true });
     });
     await batch.commit();
   }
