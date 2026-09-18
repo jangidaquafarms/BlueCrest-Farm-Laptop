@@ -17270,6 +17270,22 @@ function handleImportCSV(e) {
       const cycleCrop = pondwiseNormaliseCrop(activeCycle?.crop || 'Crop 1');
       const cycleId = typeof cycleIdFor === 'function' ? cycleIdFor(cycleYear, cycleCrop) : '';
 
+      const fileCrops = [...new Set(rows.map(r => {
+        const raw = clean(r[idx['crop']]);
+        return raw ? pondwiseNormaliseCrop(raw) : '';
+      }).filter(Boolean))];
+      const mismatchedCrops = fileCrops.filter(crop => crop !== cycleCrop);
+      if (mismatchedCrops.length) {
+        const fileCropLabel = fileCrops.join(', ');
+        const continueImport = confirm(
+          `This Purchase CSV is for ${fileCropLabel}, but the app is on ${cycleYear} • ${cycleCrop}.\n\n${rows.length} purchase line${rows.length === 1 ? '' : 's'} would be imported into ${cycleYear} • ${cycleCrop}. The Crop column in the file will not be used.\n\nOK = import into ${cycleYear} • ${cycleCrop} anyway.\nCancel = stop. Nothing will be saved. Switch Year / Crop at the top first if this file belongs to another crop.`
+        );
+        if (!continueImport) {
+          bcAlert(`Purchase CSV import cancelled.\n\nFile crop: ${fileCropLabel}\nSelected in app: ${cycleYear} • ${cycleCrop}`);
+          return;
+        }
+      }
+
       const incoming = rows.map((r, n) => {
         const get = k => clean(r[idx[k]]);
         const qty = Number(get('quantity').replace(/,/g,''));
