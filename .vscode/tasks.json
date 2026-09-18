@@ -1,0 +1,23 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Sync to GitHub",
+      "type": "shell",
+      "command": "bash sync-to-github.sh \"${input:commitMessage}\"",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    }
+  ],
+  "inputs": [
+    {
+      "id": "commitMessage",
+      "type": "promptString",
+      "description": "Commit message (what you changed)",
+      "default": "Update files"
+    }
+  ]
+}
