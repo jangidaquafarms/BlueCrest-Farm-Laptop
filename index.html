@@ -44,6 +44,13 @@ body.app-body {
   overflow: hidden;
 }
 
+/* Surgical mobile viewport fix: preserve desktop shell, but allow the page to scroll on phones. */
+@media (max-width: 760px) {
+  body.app-body { height: auto; min-height: 100dvh; overflow-x: hidden; overflow-y: auto; }
+  .app-layout { min-height: 100dvh; height: auto; width: 100%; }
+  .app-sidebar { height: 100dvh; }
+}
+
 .app-layout { display: flex; height: 100vh; width: 100vw; }
 
 .app-sidebar {
@@ -520,9 +527,8 @@ body > .invoice-product-dropdown {
 .payment-only-view .statement-summary-grid { display: none; }
 .payment-only-view .statement-main-banner h1::after { content: ' - PAYMENTS'; }
 .payment-only-view .quick-payment-drawer { margin-top: 0; margin-bottom: 1.25rem; }
-.payment-only-view .statement-ledger-table th:nth-child(6),
-.payment-only-view .statement-ledger-table td:nth-child(6) { display: none; }
-.payment-only-view .statement-ledger-table td:nth-child(6) { display: none; }
+.payment-only-view .statement-ledger-table th.statement-debit-header,
+.payment-only-view .statement-ledger-table td.statement-debit-cell { display: none; }
 
 /* --- Weekly Sample Modal Overlay --- */
 .modal-overlay {
@@ -4147,7 +4153,7 @@ body.bc-purchase-modal-open{overflow:hidden!important}
    ========================================================= */
 #inventoryView > .kpi-grid{
   display:grid!important;
-  grid-template-columns:repeat(5,minmax(0,1fr))!important;
+  grid-template-columns:repeat(6,minmax(0,1fr))!important;
   gap:.72rem!important;
   width:100%!important;
   margin:0 0 .85rem!important;
@@ -4202,7 +4208,7 @@ body.bc-purchase-modal-open{overflow:hidden!important}
   text-overflow:ellipsis!important;
 }
 
-/* Keep the fifth Low/Out-of-Stock card in the same row when active. */
+/* Keep all six inventory KPI cards in the same row when active. */
 #inventoryView > .kpi-grid #feedLowStockKpiCard{
   width:100%!important;
 }
@@ -4392,9 +4398,22 @@ body.bc-return-modal-open{overflow:hidden!important}
 .hd-breakdown-btn{margin-top:.3rem;padding:.2rem .45rem;border:1px solid #bfd4e5;border-radius:7px;background:#fff;color:#1769aa;font-size:.58rem;font-weight:850;cursor:pointer;white-space:nowrap}.hd-breakdown-btn:hover{background:#f2f8fc}
 .hd-breakdown-overlay{position:fixed;inset:0;z-index:10050;display:none;align-items:center;justify-content:center;padding:1rem;background:rgba(8,24,39,.58);backdrop-filter:blur(3px)}.hd-breakdown-overlay.open{display:flex}.hd-breakdown-dialog{width:min(560px,calc(100vw - 24px));max-height:calc(100vh - 30px);overflow:auto;border:1px solid #d9e4ed;border-radius:18px;background:#fff;box-shadow:0 28px 80px rgba(5,25,45,.30)}.hd-breakdown-head{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1rem 1.1rem;background:linear-gradient(112deg,#12304d,#17677d);color:#fff}.hd-breakdown-head h3{margin:0;font-size:1rem;font-weight:900}.hd-breakdown-head p{margin:.2rem 0 0;color:rgba(255,255,255,.75);font-size:.64rem}.hd-breakdown-close{width:34px;height:34px;border:1px solid rgba(255,255,255,.25);border-radius:9px;background:rgba(255,255,255,.1);color:#fff;font-size:1.3rem;cursor:pointer}.hd-breakdown-body{padding:1rem 1.1rem}.hd-breakdown-section{margin-bottom:.85rem;border:1px solid #dfe8ef;border-radius:13px;overflow:hidden}.hd-breakdown-section h4{margin:0;padding:.55rem .7rem;background:#f7fafc;color:#52677b;font-size:.65rem;text-transform:uppercase;letter-spacing:.05em}.hd-breakdown-row{display:flex;justify-content:space-between;gap:1rem;padding:.48rem .7rem;border-top:1px solid #edf2f6;font-size:.7rem;color:#29435a}.hd-breakdown-row strong{font-weight:900;color:#17324d}.hd-breakdown-total{background:#f4fbf7}.hd-breakdown-total strong{color:#087443;font-size:.8rem}.hd-breakdown-formula{padding:.7rem;border-radius:10px;background:#fbfdff;color:#64748b;font-size:.65rem;line-height:1.5}.hd-breakdown-foot{padding:.75rem 1.1rem;border-top:1px solid #e5edf3;color:#64748b;font-size:.6rem}
 </style>
+<style id="bluecrest-inventory-searchable-dropdown-css">
+#inventoryView .bc-inventory-search-wrap{position:relative;display:inline-block;width:260px;z-index:30}
+#inventoryView .bc-inventory-search-wrap #invSearchInput{width:100%!important}
+#inventoryView .bc-search-dropdown{position:absolute;left:0;right:0;top:calc(100% + 5px);max-height:360px;overflow:auto;background:#fff;border:1px solid #d7e2eb;border-radius:12px;box-shadow:0 12px 30px rgba(15,23,42,.12);padding:6px;z-index:1000}
+#inventoryView .bc-search-group-title{padding:7px 10px 5px;font-size:10px;text-transform:uppercase;letter-spacing:.08em;font-weight:800;color:#94a3b8}
+#inventoryView .bc-search-option{display:flex;width:100%;align-items:center;justify-content:space-between;gap:10px;padding:9px 10px;border:0;background:transparent;border-radius:8px;cursor:pointer;text-align:left;color:#243b53}
+#inventoryView .bc-search-option:hover,#inventoryView .bc-search-option:focus{background:#f1f5f9;outline:0}
+#inventoryView .bc-search-option-main{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#inventoryView .bc-search-option-meta{font-size:10px;color:#94a3b8;white-space:nowrap}
+#inventoryView .bc-search-empty{padding:14px 10px;color:#94a3b8;font-size:12px;text-align:center}
+</style>
+
+
+
 </head>
 <body class="app-body">
-
   <div class="app-layout">
 
     <!-- LEFT CLINICAL SIDEBAR -->
@@ -4535,7 +4554,7 @@ body.bc-return-modal-open{overflow:hidden!important}
       <div class="sidebar-footer">
         <button type="button" class="btn-logout" id="logoutBtn">
           <span class="logout-icon">⏻</span>
-          <span>Reset Session</span>
+          <span>Sign Out</span>
         </button>
         <span class="app-version">BlueCrest v2.8.0</span>
       </div>
@@ -4685,8 +4704,8 @@ body.bc-return-modal-open{overflow:hidden!important}
               <input type="hidden" id="pondId">
               <div class="form-grid">
                 <div class="form-group">
-                  <label for="pondName">Pond Name *</label>
-                  <input type="text" id="pondName" placeholder="e.g. Pond 1" required>
+                  <label for="pondName">Pond Number *</label>
+                  <input type="number" id="pondName" min="1" step="1" inputmode="numeric" placeholder="e.g. 1" required>
                 </div>
                 <div class="form-group">
                   <label for="hatcheryName">Hatchery Name</label>
@@ -4757,7 +4776,7 @@ body.bc-return-modal-open{overflow:hidden!important}
             </div>
             <div class="stock-transfer-page-actions">
               <span class="stock-transfer-cycle-badge" id="stockTransferCycleContext">Selected Cycle</span>
-              <button type="button" class="pill-btn action-blue" id="openStockTransferBtn">+ Add Stock Transfer</button>
+              <button type="button" class="pill-btn action-blue" id="openStockTransferBtn" onclick="openStockTransferModal(); return false;">+ Add Stock Transfer</button>
             </div>
           </div>
 
@@ -5465,6 +5484,10 @@ body.bc-return-modal-open{overflow:hidden!important}
               <div class="kpi-data"><h3 id="invTotalPurchasedValue">₹0</h3><p>Total Purchased</p></div>
             </div>
             <div class="kpi-card">
+              <div class="kpi-icon-wrapper bg-blue-tint"><span class="kpi-icon">⚖️</span></div>
+              <div class="kpi-data"><h3 id="invTotalPurchasedQty">0</h3><p>Purchase Qty</p></div>
+            </div>
+            <div class="kpi-card">
               <div class="kpi-icon-wrapper bg-purple-tint"><span class="kpi-icon">📤</span></div>
               <div class="kpi-data"><h3 id="invTotalUsedValue">₹0</h3><p>Applied in Ponds</p></div>
             </div>
@@ -5491,7 +5514,10 @@ body.bc-return-modal-open{overflow:hidden!important}
                 <option value="LOW">Low Stock</option>
                 <option value="NEGATIVE">Negative Stock</option>
               </select>
-              <input type="text" id="invSearchInput" placeholder="🔍 Search product or vendor..." class="form-input-sm">
+              <div class="bc-inventory-search-wrap">
+                <input type="text" id="invSearchInput" placeholder="🔍 Search product or vendor..." class="form-input-sm" autocomplete="off" aria-haspopup="listbox" aria-expanded="false">
+                <div id="invSearchDropdown" class="bc-search-dropdown" role="listbox" hidden></div>
+              </div>
 
               <div id="inv-prof-tabs" class="inv-prof-tabs">
                 <button type="button" class="inv-prof-tab active" data-inv-prof-cat="ALL">All Inventory</button>
@@ -6011,11 +6037,12 @@ document.addEventListener('click', function(e){ const m=document.getElementById(
           <thead>
             <tr>
               <th style="width: 50px;">Sr No.</th>
+              <th id="statementVendorHeader" style="width: 150px; display:none;">Vendor</th>
               <th style="width: 80px;">Crop</th>
               <th style="width: 120px;">Date</th>
               <th style="width: 90px;">Bill Status</th>
               <th style="width: 100px;">Bill Number</th>
-              <th style="width: 110px; text-align: right;">Debit</th>
+              <th class="statement-debit-header" style="width: 110px; text-align: right;">Debit</th>
               <th style="width: 110px; text-align: right;">Credit</th>
               <th style="width: 130px; text-align: right;">Closing Balance</th>
               <th>Remarks</th>
@@ -6033,6 +6060,7 @@ document.addEventListener('click', function(e){ const m=document.getElementById(
           <div class="form-group" style="margin:0;"><label>Crop *</label><select id="advCrop"><option value="Crop 1">Crop 1</option><option value="Crop 2">Crop 2</option></select></div>
           <div class="form-group" style="margin:0;"><label>Type *</label><select id="advType"><option value="Credit">Credit (Advance / Payment)</option><option value="Credit">Rate diff CN</option></select></div>
           <div class="form-group" style="margin:0;"><label>Bill No. (Optional)</label><input type="text" id="advBillNo" placeholder="e.g. 1021"></div>
+          <div class="form-group searchable-field" style="margin:0;"><label>Vendor *</label><input type="text" id="advVendor" placeholder="Search vendor..."><div id="advVendorSuggestions" class="ledger-suggestions" hidden></div></div>
           <div class="form-group searchable-field" style="margin:0;"><label>Account</label><input type="text" id="advAccount" placeholder="Search or add account..."><div id="advAccountSuggestions" class="ledger-suggestions" hidden></div></div>
           <div class="form-group" style="margin:0;"><label>Amount (₹) *</label><input type="number" id="advAmount" step="any" placeholder="e.g. 200000"></div>
           <div class="form-group" style="margin:0;"><label>Remarks *</label><input type="text" id="advRemarks" placeholder="Advance, Feed Return, CN..."></div>
@@ -6062,6 +6090,9 @@ const firebaseConfig = {
 };
 
 let db = null;
+let auth = null;
+let blueCrestAuthenticatedUser = null;
+let blueCrestAppStarted = false;
 try {
     if (typeof firebase !== 'undefined') {
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
@@ -6078,6 +6109,24 @@ try {
     console.error('Firebase initialization failed; continuing in local-storage mode:', firebaseInitError);
     db = null;
 }
+
+// --- Firebase Authentication ---
+// Authentication is temporarily disabled as an access gate. Firebase Auth remains
+// initialized so it can be re-enabled later without changing the rest of the app.
+function startBlueCrestApp() {
+    if (blueCrestAppStarted) return;
+    blueCrestAppStarted = true;
+    loadAndEnsureData();
+    setupGlobalCycleContext();
+    renderGlobalCycleSelector();
+    setupEventListeners();
+    renderAll();
+    autoPopulateLastFeed();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    startBlueCrestApp();
+});
 
 // --- Core Utilities ---
 function escapeHtml(str) {
@@ -6359,6 +6408,7 @@ let activeCycle = { year: 2026, crop: 'Crop 1', id: '2026|crop 1' };
 let deleteTargetId = null;
 let deleteTargetType = null;
 let vendorPaymentOnlyMode = false;
+let editingVendorTxnId = null;
 
 const views = document.querySelectorAll('.view');
 const activeRouteLabel = document.getElementById('activeRouteLabel');
@@ -6525,6 +6575,7 @@ const invDistinctCountEl = document.getElementById('invDistinctCount');
 const feedLowStockKpiCardEl = document.getElementById('feedLowStockKpiCard');
 const feedLowStockCountEl = document.getElementById('feedLowStockCount');
 const invTotalPurchasedValueEl = document.getElementById('invTotalPurchasedValue');
+const invTotalPurchasedQtyEl = document.getElementById('invTotalPurchasedQty');
 const invTotalUsedValueEl = document.getElementById('invTotalUsedValue');
 const invCurrentStockValueEl = document.getElementById('invCurrentStockValue');
 const invCurrentStockValueEl2 = document.getElementById('invCurrentStockValueEl2');
@@ -6646,6 +6697,8 @@ const advDateInput = document.getElementById('advDate');
 const advCropSelect = document.getElementById('advCrop');
 const advTypeSelect = document.getElementById('advType');
 const advBillNoInput = document.getElementById('advBillNo');
+const advVendorInput = document.getElementById('advVendor');
+const advVendorSuggestions = document.getElementById('advVendorSuggestions');
 const advAccountInput = document.getElementById('advAccount');
 const advAccountSuggestions = document.getElementById('advAccountSuggestions');
 const advAmountInput = document.getElementById('advAmount');
@@ -6657,12 +6710,7 @@ const dialogTitle = document.getElementById('dialogTitle');
 const dialogText = document.getElementById('dialogText');
 
 document.addEventListener('DOMContentLoaded', () => {
-  loadAndEnsureData();
-  setupGlobalCycleContext();
-  renderGlobalCycleSelector();
-  setupEventListeners();
-  renderAll();
-  autoPopulateLastFeed();
+  startBlueCrestApp();
 });
 
 // Product Memory System
@@ -6810,7 +6858,7 @@ function getActiveCrop2ClosingStockItems() {
     return getCrop2ClosingPackedStockEntries().filter(e=>e.cycleId===cycle.id && Number(e.qty)>0).map(e=>({...e,closingQty:Number(e.qty)||0,closingValue:Number(e.value)||0}));
 }
 function calculateCrop2ClosingStockValue(){ return getActiveCrop2ClosingStockItems().reduce((s,i)=>s+Number(i.closingValue||0),0); }
-function renderCrop2ClosingPackedStockSavedList(){ const el=document.getElementById('crop2ClosingPackedStockSavedList'); if(!el)return; const items=getActiveCrop2ClosingStockItems(); el.innerHTML=items.length?items.map(i=>`<div style="display:grid;grid-template-columns:minmax(0,1fr) 100px 120px 110px auto;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid #eef2f7;font-size:.78rem;"><span><strong>${escapeHtml(i.name)}</strong></span><span>${Number(i.qty).toLocaleString('en-IN',{maximumFractionDigits:2})} ${escapeHtml(i.unit||'')}</span><span>₹${Number(i.price||0).toLocaleString('en-IN',{maximumFractionDigits:2})}</span><strong>₹${Math.round(i.value||0).toLocaleString('en-IN')}</strong><span style="display:flex;gap:6px;"><button type="button" class="small-button" onclick="editCrop2ClosingPackedStock('${i.id}')">Edit</button><button type="button" class="small-button" style="color:var(--brand-red)" onclick="deleteCrop2ClosingPackedStock('${i.id}')">Delete</button></span></div>`).join(''):'<div style="font-size:.78rem;color:#64748b;">No saved entries.</div>'; }
+function renderCrop2ClosingPackedStockSavedList(){ const el=document.getElementById('crop2ClosingPackedStockSavedList'); if(!el)return; const items=getActiveCrop2ClosingStockItems(); el.innerHTML=items.length?items.map(i=>`<div style="display:grid;grid-template-columns:minmax(0,1fr) 100px 120px 110px auto;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid #eef2f7;font-size:.78rem;"><span><strong>${escapeHtml(i.name)}</strong></span><span>${Number(i.qty).toLocaleString('en-IN',{maximumFractionDigits:2})} ${escapeHtml(i.unit||'')}</span><span>₹${Number(i.price||0).toLocaleString('en-IN',{maximumFractionDigits:2})}</span><strong>₹${Math.round(i.value||0).toLocaleString('en-IN')}</strong><span style="display:flex;gap:6px;"><button type="button" class="small-button" data-bc-action="editCrop2ClosingPackedStock" data-id="${escapeHtml(String(i.id))}">Edit</button><button type="button" class="small-button" style="color:var(--brand-red)" data-bc-action="deleteCrop2ClosingPackedStock" data-id="${escapeHtml(String(i.id))}">Delete</button></span></div>`).join(''):'<div style="font-size:.78rem;color:#64748b;">No saved entries.</div>'; }
 function populateCrop2ClosingProductSelect(){ const s=document.getElementById('crop2ClosingProduct'),input=document.getElementById('crop2ClosingProductSearch'),dd=document.getElementById('crop2ClosingProductDropdown'); if(!s)return; const options=getCrop2ClosingProductOptions(); s.innerHTML='<option value="">Select product</option>'+options.map(p=>`<option value="${escapeHtml(p.name)}">${escapeHtml(p.name)}${p.company?' • '+escapeHtml(p.company):''}</option>`).join(''); if(dd){dd.innerHTML=options.map(p=>`<button type="button" class="closing-product-option" data-value="${escapeHtml(p.name)}"><span>${escapeHtml(p.name)}</span>${p.company?`<small>${escapeHtml(p.company)}</small>`:''}</button>`).join('') || '<div class="closing-product-empty">No products available</div>'; dd.querySelectorAll('.closing-product-option').forEach(btn=>btn.addEventListener('click',()=>selectCrop2ClosingProduct(btn.dataset.value)));} if(input)input.value=''; crop2ClosingKeyboardIndex=-1; }
 function getVisibleCrop2ClosingProductOptions(){ const dd=document.getElementById('crop2ClosingProductDropdown'); return dd ? Array.from(dd.querySelectorAll('.closing-product-option')).filter(btn=>!btn.hidden) : []; }
 function setCrop2ClosingKeyboardHighlight(index){ const options=getVisibleCrop2ClosingProductOptions(); options.forEach(btn=>btn.classList.remove('keyboard-active')); if(!options.length){crop2ClosingKeyboardIndex=-1;return;} crop2ClosingKeyboardIndex=Math.max(0,Math.min(index,options.length-1)); const active=options[crop2ClosingKeyboardIndex]; active.classList.add('keyboard-active'); active.scrollIntoView({block:'nearest'}); }
@@ -6820,9 +6868,9 @@ function filterCrop2ClosingProductDropdown(){ const input=document.getElementByI
 function handleCrop2ClosingProductKeydown(e){ const input=e.currentTarget,dd=document.getElementById('crop2ClosingProductDropdown'); if(!input||!dd)return; let options=getVisibleCrop2ClosingProductOptions(); if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();if(dd.hidden){dd.hidden=false;filterCrop2ClosingProductDropdown();options=getVisibleCrop2ClosingProductOptions();}if(!options.length)return;const delta=e.key==='ArrowDown'?1:-1;const next=crop2ClosingKeyboardIndex<0?(e.key==='ArrowDown'?0:options.length-1):crop2ClosingKeyboardIndex+delta;setCrop2ClosingKeyboardHighlight((next+options.length)%options.length);return;} if(e.key==='Enter'){if(!dd.hidden&&options.length){e.preventDefault();const idx=crop2ClosingKeyboardIndex<0?0:crop2ClosingKeyboardIndex;selectCrop2ClosingProduct(options[idx].dataset.value);}return;} if(e.key==='Escape'){dd.hidden=true;crop2ClosingKeyboardIndex=-1;return;} }
 function updateCrop2ClosingProductPreview(){ const name=document.getElementById('crop2ClosingProduct')?.value||'',qty=Number(document.getElementById('crop2ClosingQty')?.value||0),pe=document.getElementById('crop2ClosingPrice'),ve=document.getElementById('crop2ClosingValue'),ie=document.getElementById('crop2ClosingProductInfo'); if(!name){if(pe)pe.value='';if(ve)ve.value='';if(ie)ie.textContent='Select a product to fetch its Crop 2 cost price.';return;} const x=getCrop2ClosingProductPrice(name);if(pe)pe.value=`₹${x.price.toLocaleString('en-IN',{maximumFractionDigits:2})} / ${x.unit}`;if(ve)ve.value=`₹${(qty*x.price).toLocaleString('en-IN',{maximumFractionDigits:2})}`;if(ie)ie.innerHTML=`${escapeHtml(x.source)}: <strong>₹${x.price.toLocaleString('en-IN',{maximumFractionDigits:2})}/${escapeHtml(x.unit)}</strong>${x.vendor?' • '+escapeHtml(x.vendor):''}`; }
 function openCrop2ClosingPackedStockModal(){ const m=document.getElementById('crop2ClosingPackedStockModal');if(!m)return;crop2ClosingEditingId=null;populateCrop2ClosingProductSelect();document.getElementById('crop2ClosingPackedStockForm')?.reset();const s=document.getElementById('crop2ClosingProduct');if(s)s.value='';const input=document.getElementById('crop2ClosingProductSearch'),dd=document.getElementById('crop2ClosingProductDropdown');if(input)input.value='';if(dd)dd.hidden=true;updateCrop2ClosingProductPreview();renderCrop2ClosingPackedStockSavedList();const submit=m.querySelector('button[type="submit"]');if(submit)submit.textContent='Save Closing Stock';m.showModal(); }
-function editCrop2ClosingPackedStock(id){ const entry=getCrop2ClosingPackedStockEntries().find(e=>String(e.id)===String(id));if(!entry){alert('Closing inventory entry not found.');return;}crop2ClosingEditingId=String(entry.id);const m=document.getElementById('crop2ClosingPackedStockModal');if(!m)return;populateCrop2ClosingProductSelect();selectCrop2ClosingProduct(String(entry.name||''));const qtyEl=document.getElementById('crop2ClosingQty');if(qtyEl)qtyEl.value=Number(entry.qty)||0;updateCrop2ClosingProductPreview();renderCrop2ClosingPackedStockSavedList();const submit=m.querySelector('button[type="submit"]');if(submit)submit.textContent='Update Closing Stock';m.showModal(); }
+function editCrop2ClosingPackedStock(id){ const entry=getCrop2ClosingPackedStockEntries().find(e=>String(e.id)===String(id));if(!entry){bcAlert('Closing inventory entry not found.');return;}crop2ClosingEditingId=String(entry.id);const m=document.getElementById('crop2ClosingPackedStockModal');if(!m)return;populateCrop2ClosingProductSelect();selectCrop2ClosingProduct(String(entry.name||''));const qtyEl=document.getElementById('crop2ClosingQty');if(qtyEl)qtyEl.value=Number(entry.qty)||0;updateCrop2ClosingProductPreview();renderCrop2ClosingPackedStockSavedList();const submit=m.querySelector('button[type="submit"]');if(submit)submit.textContent='Update Closing Stock';m.showModal(); }
 function deleteCrop2ClosingPackedStock(id){ if(!confirm('Delete this Crop 2 closing stock entry?'))return;saveCrop2ClosingPackedStockEntries(getCrop2ClosingPackedStockEntries().filter(e=>String(e.id)!==String(id)));crop2ClosingEditingId=null;renderCropClosingStockPanel();renderCrop2ClosingPackedStockSavedList();if(document.getElementById('cropClosingStockViewModal')?.open)openCropClosingStockViewModal(); }
-function saveCrop2ClosingPackedStock(event){ event.preventDefault();const name=document.getElementById('crop2ClosingProduct')?.value||'',qty=Number(document.getElementById('crop2ClosingQty')?.value||0);if(!name||!(qty>0)){alert('Select a product and enter a closing quantity.');return;}const cycle=getCrop2ClosingCycle(),x=getCrop2ClosingProductPrice(name);if(!(x.price>0)){alert('No cost price is available for this product. Record a Crop 2 purchase or ensure it came from Crop 1 opening stock first.');return;}const fifo=getFifoPhysicalClosingValuation(name,x.category||'Fertilizer',cycle.year,'Crop 2',qty,new Date().toISOString().slice(0,10),crop2ClosingEditingId);if(!fifo.ok){alert(`${fifo.reason}${fifo.excessQty>0 ? ` Excess: ${fifo.excessQty.toLocaleString('en-IN',{maximumFractionDigits:3})} base units.` : ''}`);return;}if(!(fifo.closingValue>=0)||(qty>0&&!(fifo.closingRate>0))){alert('FIFO closing valuation could not be calculated. Check purchases, returns and usage history.');return;}const entries=getCrop2ClosingPackedStockEntries();let idx=crop2ClosingEditingId?entries.findIndex(e=>String(e.id)===String(crop2ClosingEditingId)):-1;const key=name.trim().toLowerCase();const duplicateIdx=entries.findIndex(e=>e.cycleId===cycle.id&&String(e.name).trim().toLowerCase()===key&&(!crop2ClosingEditingId||String(e.id)!==String(crop2ClosingEditingId)));if(duplicateIdx>=0){alert('A Crop 2 closing inventory entry for this product already exists. Edit that entry instead.');return;}const rec={id:idx>=0?entries[idx].id:`c2close-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,cycleId:cycle.id,year:cycle.year,crop:'Crop 2',name:name.trim(),company:x.vendor,category:x.category||'Fertilizer',unit:x.unit,qty,price:Number(fifo.closingRate||0),value:Number(fifo.closingValue||0),fifoClosingValue:Number(fifo.closingValue||0),fifoClosingRate:Number(fifo.closingRate||0),fifoTheoreticalQty:Number(fifo.theoreticalQty||0),fifoShortageQty:Number(fifo.shortageQty||0),fifoShortageValue:Number(fifo.adjustmentValue||0),fifoValuation:'FIFO physical closing',date:new Date().toISOString()};if(idx>=0)entries[idx]=rec;else entries.push(rec);saveCrop2ClosingPackedStockEntries(entries);const wasEditing=idx>=0;crop2ClosingEditingId=null;renderCropClosingStockPanel();renderCrop2ClosingPackedStockSavedList();document.getElementById('crop2ClosingQty').value='';updateCrop2ClosingProductPreview();const submit=document.getElementById('crop2ClosingPackedStockModal')?.querySelector('button[type="submit"]');if(submit)submit.textContent='Save Closing Stock';alert(wasEditing?'Crop 2 closing stock updated.':'Crop 2 closing stock saved.'); }
+function saveCrop2ClosingPackedStock(event){ event.preventDefault();const name=document.getElementById('crop2ClosingProduct')?.value||'',qty=Number(document.getElementById('crop2ClosingQty')?.value||0);if(!name||!(qty>0)){bcAlert('Select a product and enter a closing quantity.');return;}const cycle=getCrop2ClosingCycle(),x=getCrop2ClosingProductPrice(name);if(!(x.price>0)){bcAlert('No cost price is available for this product. Record a Crop 2 purchase or ensure it came from Crop 1 opening stock first.');return;}const fifo=getFifoPhysicalClosingValuation(name,x.category||'Fertilizer',cycle.year,'Crop 2',qty,new Date().toISOString().slice(0,10),crop2ClosingEditingId);if(!fifo.ok){bcAlert(`${fifo.reason}${fifo.excessQty>0 ? ` Excess: ${fifo.excessQty.toLocaleString('en-IN',{maximumFractionDigits:3})} base units.` : ''}`);return;}if(!(fifo.closingValue>=0)||(qty>0&&!(fifo.closingRate>0))){bcAlert('FIFO closing valuation could not be calculated. Check purchases, returns and usage history.');return;}const entries=getCrop2ClosingPackedStockEntries();let idx=crop2ClosingEditingId?entries.findIndex(e=>String(e.id)===String(crop2ClosingEditingId)):-1;const key=name.trim().toLowerCase();const duplicateIdx=entries.findIndex(e=>e.cycleId===cycle.id&&String(e.name).trim().toLowerCase()===key&&(!crop2ClosingEditingId||String(e.id)!==String(crop2ClosingEditingId)));if(duplicateIdx>=0){bcAlert('A Crop 2 closing inventory entry for this product already exists. Edit that entry instead.');return;}const rec={id:idx>=0?entries[idx].id:`c2close-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,cycleId:cycle.id,year:cycle.year,crop:'Crop 2',name:name.trim(),company:x.vendor,category:x.category||'Fertilizer',unit:x.unit,qty,price:Number(fifo.closingRate||0),value:Number(fifo.closingValue||0),fifoClosingValue:Number(fifo.closingValue||0),fifoClosingRate:Number(fifo.closingRate||0),fifoTheoreticalQty:Number(fifo.theoreticalQty||0),fifoShortageQty:Number(fifo.shortageQty||0),fifoShortageValue:Number(fifo.adjustmentValue||0),fifoValuation:'FIFO physical closing',date:new Date().toISOString()};if(idx>=0)entries[idx]=rec;else entries.push(rec);saveCrop2ClosingPackedStockEntries(entries);const wasEditing=idx>=0;crop2ClosingEditingId=null;renderCropClosingStockPanel();renderCrop2ClosingPackedStockSavedList();document.getElementById('crop2ClosingQty').value='';updateCrop2ClosingProductPreview();const submit=document.getElementById('crop2ClosingPackedStockModal')?.querySelector('button[type="submit"]');if(submit)submit.textContent='Save Closing Stock';bcAlert(wasEditing?'Crop 2 closing stock updated.':'Crop 2 closing stock saved.'); }
 function openActiveCropClosingPackedStockModal(){ const crop=String((typeof getActiveCycle==='function'?getActiveCycle():activeCycle)?.crop||'').trim().toLowerCase(); if(crop==='crop 2') openCrop2ClosingPackedStockModal(); else openCrop1ClosingPackedStockModal(); }
 document.addEventListener('DOMContentLoaded',()=>{ const input=document.getElementById('crop2ClosingProductSearch'),picker=document.getElementById('crop2ClosingProductPicker'),dd=document.getElementById('crop2ClosingProductDropdown');input?.addEventListener('focus',()=>{if(dd){dd.hidden=false;filterCrop2ClosingProductDropdown();}});input?.addEventListener('input',()=>{crop2ClosingKeyboardIndex=-1;filterCrop2ClosingProductDropdown();});input?.addEventListener('keydown',handleCrop2ClosingProductKeydown);picker?.querySelector('.closing-product-search-wrap')?.addEventListener('click',()=>{input?.focus();if(dd)dd.hidden=false;filterCrop2ClosingProductDropdown();});document.addEventListener('click',e=>{if(picker&&!picker.contains(e.target)&&dd){dd.hidden=true;crop2ClosingKeyboardIndex=-1;}});document.getElementById('crop2ClosingProduct')?.addEventListener('change',updateCrop2ClosingProductPreview);document.getElementById('crop2ClosingQty')?.addEventListener('input',updateCrop2ClosingProductPreview);document.getElementById('crop2ClosingPackedStockForm')?.addEventListener('submit',saveCrop2ClosingPackedStock);});
 
@@ -7034,11 +7082,11 @@ function updateCrop1ClosingProductPreview(){
     const x=getCrop1ClosingProductPrice(name); if(pe)pe.value=`₹${x.price.toLocaleString('en-IN',{maximumFractionDigits:2})} / ${x.unit}`; if(ve)ve.value=`₹${(qty*x.price).toLocaleString('en-IN',{maximumFractionDigits:2})}`; if(ie)ie.innerHTML=`Latest Crop 1 purchase: <strong>₹${x.price.toLocaleString('en-IN',{maximumFractionDigits:2})}/${escapeHtml(x.unit)}</strong>${x.vendor?' • '+escapeHtml(x.vendor):''}`;
 }
 let crop1ClosingEditingId = null;
-function renderCrop1ClosingPackedStockSavedList(){ const el=document.getElementById('crop1ClosingPackedStockSavedList'); if(!el)return; const items=getActiveCropClosingStockItems(); el.innerHTML=items.length?items.map(i=>`<div style="display:grid;grid-template-columns:minmax(0,1fr) 100px 120px 110px auto;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid #eef2f7;font-size:.78rem;"><span><strong>${escapeHtml(i.name)}</strong></span><span>${Number(i.qty).toLocaleString('en-IN',{maximumFractionDigits:2})} ${escapeHtml(i.unit||'')}</span><span>₹${Number(i.price||0).toLocaleString('en-IN',{maximumFractionDigits:2})}</span><strong>₹${Math.round(i.value||0).toLocaleString('en-IN')}</strong><span style="display:flex;gap:6px;"><button type="button" class="small-button" onclick="editCrop1ClosingPackedStock('${i.id}')">Edit</button><button type="button" class="small-button" style="color:var(--brand-red)" onclick="deleteCrop1ClosingPackedStock('${i.id}')">Delete</button></span></div>`).join(''):'<div style="font-size:.78rem;color:#64748b;">No saved entries.</div>'; }
+function renderCrop1ClosingPackedStockSavedList(){ const el=document.getElementById('crop1ClosingPackedStockSavedList'); if(!el)return; const items=getActiveCropClosingStockItems(); el.innerHTML=items.length?items.map(i=>`<div style="display:grid;grid-template-columns:minmax(0,1fr) 100px 120px 110px auto;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid #eef2f7;font-size:.78rem;"><span><strong>${escapeHtml(i.name)}</strong></span><span>${Number(i.qty).toLocaleString('en-IN',{maximumFractionDigits:2})} ${escapeHtml(i.unit||'')}</span><span>₹${Number(i.price||0).toLocaleString('en-IN',{maximumFractionDigits:2})}</span><strong>₹${Math.round(i.value||0).toLocaleString('en-IN')}</strong><span style="display:flex;gap:6px;"><button type="button" class="small-button" data-bc-action="editCrop1ClosingPackedStock" data-id="${escapeHtml(String(i.id))}">Edit</button><button type="button" class="small-button" style="color:var(--brand-red)" data-bc-action="deleteCrop1ClosingPackedStock" data-id="${escapeHtml(String(i.id))}">Delete</button></span></div>`).join(''):'<div style="font-size:.78rem;color:#64748b;">No saved entries.</div>'; }
 function openCrop1ClosingPackedStockModal(){ const m=document.getElementById('crop1ClosingPackedStockModal'); if(!m)return; crop1ClosingEditingId=null; populateCrop1ClosingProductSelect(); document.getElementById('crop1ClosingPackedStockForm')?.reset(); const s=document.getElementById('crop1ClosingProduct'); if(s)s.value=''; const input=document.getElementById('crop1ClosingProductSearch'),dd=document.getElementById('crop1ClosingProductDropdown'); if(input)input.value=''; if(dd)dd.hidden=true; updateCrop1ClosingProductPreview(); renderCrop1ClosingPackedStockSavedList(); const submit=m.querySelector('button[type="submit"]'); if(submit)submit.textContent='Save Closing Stock'; m.showModal(); }
 function editCrop1ClosingPackedStock(id){
     const entry=getCrop1ClosingPackedStockEntries().find(e=>String(e.id)===String(id));
-    if(!entry){alert('Closing inventory entry not found.');return;}
+    if(!entry){bcAlert('Closing inventory entry not found.');return;}
     crop1ClosingEditingId=String(entry.id);
     document.getElementById('cropClosingStockViewModal')?.close();
     const m=document.getElementById('crop1ClosingPackedStockModal');
@@ -7055,16 +7103,16 @@ function editCrop1ClosingPackedStock(id){
 }
 function deleteCrop1ClosingPackedStock(id){ if(!confirm('Delete this Crop 1 closing stock entry?'))return; saveCrop1ClosingPackedStockEntries(getCrop1ClosingPackedStockEntries().filter(e=>String(e.id)!==String(id))); crop1ClosingEditingId=null; renderCropClosingStockPanel(); renderCrop1ClosingPackedStockSavedList(); if(document.getElementById('cropClosingStockViewModal')?.open) openCropClosingStockViewModal(); }
 function saveCrop1ClosingPackedStock(event){
-    event.preventDefault(); const name=document.getElementById('crop1ClosingProduct')?.value||'', qty=Number(document.getElementById('crop1ClosingQty')?.value||0); if(!name||!(qty>0)){alert('Select a product and enter a closing quantity.');return;}
-    const cycle=getCrop1ClosingCycle(), x=getCrop1ClosingProductPrice(name); if(!(x.price>0)){alert('No purchase price is available for this product. Please record a purchase first.');return;}
+    event.preventDefault(); const name=document.getElementById('crop1ClosingProduct')?.value||'', qty=Number(document.getElementById('crop1ClosingQty')?.value||0); if(!name||!(qty>0)){bcAlert('Select a product and enter a closing quantity.');return;}
+    const cycle=getCrop1ClosingCycle(), x=getCrop1ClosingProductPrice(name); if(!(x.price>0)){bcAlert('No purchase price is available for this product. Please record a purchase first.');return;}
     const fifo=getFifoPhysicalClosingValuation(name, x.category || 'Fertilizer', cycle.year, 'Crop 1', qty, new Date().toISOString().slice(0,10), crop1ClosingEditingId);
-    if(!fifo.ok){alert(`${fifo.reason}${fifo.excessQty>0 ? ` Excess: ${fifo.excessQty.toLocaleString('en-IN',{maximumFractionDigits:3})} base units.` : ''}`);return;}
-    if(!(fifo.closingValue>=0) || (qty>0 && !(fifo.closingRate>0))){alert('FIFO closing valuation could not be calculated. Check purchases, returns and usage history.');return;}
+    if(!fifo.ok){bcAlert(`${fifo.reason}${fifo.excessQty>0 ? ` Excess: ${fifo.excessQty.toLocaleString('en-IN',{maximumFractionDigits:3})} base units.` : ''}`);return;}
+    if(!(fifo.closingValue>=0) || (qty>0 && !(fifo.closingRate>0))){bcAlert('FIFO closing valuation could not be calculated. Check purchases, returns and usage history.');return;}
     const entries=getCrop1ClosingPackedStockEntries();
     let idx = crop1ClosingEditingId ? entries.findIndex(e=>String(e.id)===String(crop1ClosingEditingId)) : -1;
     const key=name.trim().toLowerCase();
     const duplicateIdx=entries.findIndex(e=>e.cycleId===cycle.id&&String(e.name).trim().toLowerCase()===key&&(!crop1ClosingEditingId||String(e.id)!==String(crop1ClosingEditingId)));
-    if(duplicateIdx>=0){alert('A closing inventory entry for this product already exists. Edit that entry instead.');return;}
+    if(duplicateIdx>=0){bcAlert('A closing inventory entry for this product already exists. Edit that entry instead.');return;}
     const rec={id:idx>=0?entries[idx].id:`c1close-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,cycleId:cycle.id,year:cycle.year,crop:'Crop 1',name:name.trim(),company:x.vendor,category:x.category||'Fertilizer',unit:x.unit,qty,price:Number(fifo.closingRate||0),value:Number(fifo.closingValue||0),fifoClosingValue:Number(fifo.closingValue||0),fifoClosingRate:Number(fifo.closingRate||0),fifoTheoreticalQty:Number(fifo.theoreticalQty||0),fifoShortageQty:Number(fifo.shortageQty||0),fifoShortageValue:Number(fifo.adjustmentValue||0),fifoValuation:'FIFO physical closing',date:new Date().toISOString()};
     if(idx>=0)entries[idx]=rec;else entries.push(rec);
     saveCrop1ClosingPackedStockEntries(entries);
@@ -7073,7 +7121,7 @@ function saveCrop1ClosingPackedStock(event){
     renderCropClosingStockPanel(); renderCrop1ClosingPackedStockSavedList();
     document.getElementById('crop1ClosingQty').value=''; updateCrop1ClosingProductPreview();
     const submit=document.getElementById('crop1ClosingPackedStockModal')?.querySelector('button[type="submit"]'); if(submit)submit.textContent='Save Closing Stock';
-    alert(wasEditing?'Closing stock updated.':'Closing stock saved.');
+    bcAlert(wasEditing?'Closing stock updated.':'Closing stock saved.');
 }
 
 document.addEventListener('DOMContentLoaded',()=>{ const input=document.getElementById('crop1ClosingProductSearch'), picker=document.getElementById('crop1ClosingProductPicker'), dd=document.getElementById('crop1ClosingProductDropdown'); input?.addEventListener('focus',()=>{if(dd){dd.hidden=false;filterCrop1ClosingProductDropdown();}}); input?.addEventListener('input',()=>{crop1ClosingKeyboardIndex=-1;filterCrop1ClosingProductDropdown();}); input?.addEventListener('keydown',handleCrop1ClosingProductKeydown); picker?.querySelector('.closing-product-search-wrap')?.addEventListener('click',()=>{input?.focus();if(dd)dd.hidden=false;filterCrop1ClosingProductDropdown();}); document.addEventListener('click',e=>{if(picker&&!picker.contains(e.target)&&dd){dd.hidden=true;crop1ClosingKeyboardIndex=-1;}}); document.getElementById('crop1ClosingProduct')?.addEventListener('change',updateCrop1ClosingProductPreview);document.getElementById('crop1ClosingQty')?.addEventListener('input',updateCrop1ClosingProductPreview);document.getElementById('crop1ClosingPackedStockForm')?.addEventListener('submit',saveCrop1ClosingPackedStock);});
@@ -7142,7 +7190,7 @@ function setActiveCycle(year, crop) {
 }
 function renderCycleManagerList() {
   const el=document.getElementById('cycleList'); if(!el) return;
-  el.innerHTML=farmCycles.map(c=>`<div class="cycle-list-row"><strong>${escapeHtml(c.year+' • '+c.crop)}</strong><button type="button" class="small-button" onclick="setActiveCycle(${c.year}, '${String(c.crop).replace(/'/g,"\\'")}'); document.getElementById('cycleManagerModal').classList.remove('active');">Use this cycle</button></div>`).join('');
+  el.innerHTML=farmCycles.map(c=>`<div class="cycle-list-row"><strong>${escapeHtml(c.year+' • '+c.crop)}</strong><button type="button" class="small-button" data-bc-action="setActiveCycle" data-year="${escapeHtml(String(c.year))}" data-crop="${escapeHtml(String(c.crop))}">Use this cycle</button></div>`).join('');
 }
 function setupGlobalCycleContext() {
   const ys=document.getElementById('globalYearSelect'), cs=document.getElementById('globalCropSelect');
@@ -7166,14 +7214,45 @@ function dedupePondsByCycleAndName(list) {
     const key = `${cycleId}|${name}`;
     if (seen.has(key)) {
       const idx = seen.get(key);
-      // Prefer the record carrying the richer/newer pond-type information.
-      const existing = result[idx];
-      const score = x => Number(Boolean(x.pondType)) + Number(Boolean(x.initialStockingNumber)) + Number(Boolean(x.isMotherPond)) + Number(Boolean(x.stockingDate));
-      if (score(p) > score(existing)) result[idx] = p;
+      const existing = result[idx] || {};
+
+      // Merge duplicate legacy/canonical pond documents instead of simply
+      // choosing whichever Firestore document happens to arrive first. This
+      // is important for real data: an older duplicate may contain 0 for the
+      // stocking number while the newly saved canonical document contains the
+      // actual stocking number. Never let that older record hide real data.
+      const merged = { ...existing };
+      Object.keys(p).forEach(k => {
+        const incoming = p[k];
+        const current = merged[k];
+        const incomingEmpty = incoming === undefined || incoming === null || incoming === '';
+        const currentEmpty = current === undefined || current === null || current === '';
+        if (currentEmpty && !incomingEmpty) merged[k] = incoming;
+      });
+
+      // Prefer populated stocking values. A zero is a valid fallback, but it
+      // must never overwrite a positive real stocking number.
+      const existingStock = Number(existing.initialStockingNumber ?? existing.stockingCount ?? existing.stockedCount ?? existing.stockedNumber ?? existing.pieces ?? 0) || 0;
+      const incomingStock = Number(p.initialStockingNumber ?? p.stockingCount ?? p.stockedCount ?? p.stockedNumber ?? p.pieces ?? 0) || 0;
+      if (incomingStock > existingStock) {
+        merged.initialStockingNumber = incoming.initialStockingNumber ?? incomingStock;
+        merged.stockingCount = incoming.stockingCount ?? incomingStock;
+      }
+
+      // Prefer an explicit pond type, stocking date, seed price and canonical
+      // Firestore reference when the duplicate contains them.
+      if (p.pondType) merged.pondType = p.pondType;
+      if (p.isMotherPond === true) merged.isMotherPond = true;
+      if (p.stockingDate) merged.stockingDate = p.stockingDate;
+      if (p.seedPrice != null) { merged.seedPrice = p.seedPrice; merged.seedPricePerPl = p.seedPricePerPl ?? p.seedPrice; }
+      if (p.firestoreId && String(p.firestoreId) === String(canonicalPondFirestoreId(p.cycleId || cycleIdFor(year, crop), p.id || p.name))) {
+        merged.firestoreId = p.firestoreId;
+      }
+      result[idx] = merged;
       return;
     }
     seen.set(key, result.length);
-    result.push(p);
+    result.push({ ...p });
   });
   return result;
 }
@@ -7560,25 +7639,41 @@ function loadAndEnsureData() {
   saveStorage();
 }
 
+async function firebaseFirstBatchWrite(collectionName, records) {
+  // Login gate is temporarily disabled. Firestore Security Rules still control
+  // whether cloud writes are permitted for the current Firebase session.
+
+  if (typeof db === 'undefined' || !db) throw new Error('Firebase is not connected. Data was not saved.');
+  const list = Array.isArray(records) ? records : [records];
+  const batch = db.batch();
+  list.forEach(record => batch.set(db.collection(collectionName).doc(String(record.id)), record, { merge: true }));
+  await batch.commit();
+}
+
 function saveStorage() {
-  localStorage.setItem(STORAGE_KEYS.PONDS, JSON.stringify(ponds));
-  localStorage.setItem(STORAGE_KEYS.FEEDS, JSON.stringify(feedEntries));
-  localStorage.setItem(STORAGE_KEYS.SAMPLES, JSON.stringify(samples));
-  localStorage.setItem(STORAGE_KEYS.HARVESTS, JSON.stringify(harvests));
-  localStorage.setItem(STORAGE_KEYS.PURCHASES, JSON.stringify(purchases));
-  localStorage.setItem(STORAGE_KEYS.STOCK_RETURNS, JSON.stringify(stockReturns));
-  localStorage.setItem(STORAGE_KEYS.TREATMENTS, JSON.stringify(treatments));
-  localStorage.setItem(STORAGE_KEYS.VENDOR_TXNS, JSON.stringify(vendorTransactions));
-  localStorage.setItem(STORAGE_KEYS.VENDORS, JSON.stringify(vendors));
-  localStorage.setItem(STORAGE_KEYS.LEDGER_ENTRIES, JSON.stringify(ledgerEntries));
-  localStorage.setItem(STORAGE_KEYS.LEDGER_SUBCATEGORIES, JSON.stringify(customLedgerSubcategories));
-  localStorage.setItem(STORAGE_KEYS.LEDGER_ACCOUNTS, JSON.stringify(customLedgerAccounts));
-  localStorage.setItem(STORAGE_KEYS.MASTER_CATALOGUE, JSON.stringify(masterCatalogue));
-  localStorage.setItem(STORAGE_KEYS.FEED_PHYSICAL_STOCK, JSON.stringify(feedPhysicalStock));
-  localStorage.setItem(STORAGE_KEYS.FEED_MIN_STOCK, JSON.stringify(feedMinStockKg));
-  localStorage.setItem(STORAGE_KEYS.FEED_ADJUSTMENTS, JSON.stringify(feedStockAdjustments));
-  localStorage.setItem('bluecrest_feed_crop_closing_adjustments', JSON.stringify(feedCropClosingAdjustments));
-  localStorage.setItem('bluecrest_feed_crop_closing_adjustment_history', JSON.stringify(feedCropClosingAdjustmentHistory));
+  // Firestore is authoritative for these large operational collections and
+  // their listeners already refresh the local cache. Do not stringify them
+  // on every unrelated save; this keeps Purchase History from repeatedly
+  // serializing the entire farm history and avoids unnecessary UI stalls.
+  const localCache = [
+    [STORAGE_KEYS.STOCK_RETURNS, stockReturns],
+    [STORAGE_KEYS.VENDOR_TXNS, vendorTransactions],
+    [STORAGE_KEYS.VENDORS, vendors],
+    [STORAGE_KEYS.LEDGER_ENTRIES, ledgerEntries],
+    [STORAGE_KEYS.LEDGER_SUBCATEGORIES, customLedgerSubcategories],
+    [STORAGE_KEYS.LEDGER_ACCOUNTS, customLedgerAccounts],
+    [STORAGE_KEYS.MASTER_CATALOGUE, masterCatalogue],
+    [STORAGE_KEYS.FEED_PHYSICAL_STOCK, feedPhysicalStock],
+    [STORAGE_KEYS.FEED_MIN_STOCK, feedMinStockKg],
+    [STORAGE_KEYS.FEED_ADJUSTMENTS, feedStockAdjustments],
+    ['bluecrest_feed_crop_closing_adjustments', feedCropClosingAdjustments],
+    ['bluecrest_feed_crop_closing_adjustment_history', feedCropClosingAdjustmentHistory]
+  ];
+  try {
+    localCache.forEach(([key, value]) => localStorage.setItem(key, JSON.stringify(value)));
+  } catch (e) {
+    console.warn('Local cache save skipped:', e);
+  }
 }
 
 function toggleNavGroup(groupId) {
@@ -8064,7 +8159,7 @@ function addInvoiceItemRow(data = {}, autoFocus = false) {
 
   deleteBtn.addEventListener('click', () => {
     if (document.querySelectorAll('.invoice-item-row:not(.return-item-row)').length <= 1) {
-      alert('An invoice must contain at least one item row.');
+      bcAlert('An invoice must contain at least one item row.');
       return;
     }
     nameDrop.remove();
@@ -8313,7 +8408,7 @@ function addReturnItemRow(data = {}, autoFocus = false) {
 
   deleteBtn.addEventListener('click', () => {
     if (document.querySelectorAll('.return-item-row').length <= 1) {
-      alert('A stock return must contain at least one item row.');
+      bcAlert('A stock return must contain at least one item row.');
       return;
     }
     nameDrop.remove();
@@ -8662,7 +8757,7 @@ function renderPhysicalSettlementSavedList() {
   const rows = getActivePhysicalInventorySettlements();
   el.innerHTML = rows.length ? rows.map(r => {
     const diff = Number(r.differenceQty) || 0, val = Number(r.adjustmentValue) || 0;
-    return `<div style="display:grid;grid-template-columns:minmax(0,1fr) 120px 120px 120px auto;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid #eef2f7;font-size:.78rem;"><span><strong>${escapeHtml(r.productName)}</strong><small style="display:block;color:#7890a8;">${escapeHtml(r.category || '')}</small></span><span>System ${Number(r.systemQty).toFixed(3)}</span><span>Physical ${Number(r.physicalQty).toFixed(3)}</span><span style="font-weight:800;color:${diff < -0.000001 ? 'var(--brand-red)' : diff > 0.000001 ? 'var(--brand-green)' : '#526b85'};">${diff > 0 ? '+' : ''}${diff.toFixed(3)}<small style="display:block;color:#7890a8;">${diff < -0.000001 ? 'Shortage' : diff > 0.000001 ? 'Excess' : 'Matched'} • ₹${Math.round(Math.abs(val)).toLocaleString('en-IN')}</small></span><button type="button" class="small-button" onclick="editPhysicalInventorySettlement('${String(r.id).replace(/'/g,"\\'")}')">Edit</button></div>`;
+    return `<div style="display:grid;grid-template-columns:minmax(0,1fr) 120px 120px 120px auto;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid #eef2f7;font-size:.78rem;"><span><strong>${escapeHtml(r.productName)}</strong><small style="display:block;color:#7890a8;">${escapeHtml(r.category || '')}</small></span><span>System ${Number(r.systemQty).toFixed(3)}</span><span>Physical ${Number(r.physicalQty).toFixed(3)}</span><span style="font-weight:800;color:${diff < -0.000001 ? 'var(--brand-red)' : diff > 0.000001 ? 'var(--brand-green)' : '#526b85'};">${diff > 0 ? '+' : ''}${diff.toFixed(3)}<small style="display:block;color:#7890a8;">${diff < -0.000001 ? 'Shortage' : diff > 0.000001 ? 'Excess' : 'Matched'} • ₹${Math.round(Math.abs(val)).toLocaleString('en-IN')}</small></span><button type="button" class="small-button" data-bc-action="editPhysicalInventorySettlement" data-id="${escapeHtml(String(r.id))}">Edit</button></div>`;
   }).join('') : '<div style="font-size:.78rem;color:#64748b;">No physical settlements saved for this cycle.</div>';
 }
 function updatePhysicalSettlementSystemStock() {
@@ -8724,8 +8819,8 @@ function savePhysicalInventorySettlement(event) {
   event.preventDefault();
   const name = document.getElementById('physicalSettlementProduct')?.value || '';
   const physical = Number(document.getElementById('physicalSettlementPhysicalQty')?.value);
-  if (!name || !Number.isFinite(physical) || physical < 0) { alert('Select a product and enter a valid physical stock quantity.'); return; }
-  const item = getPhysicalSettlementSystemItem(name); if (!item) { alert('Product not found in the active inventory.'); return; }
+  if (!name || !Number.isFinite(physical) || physical < 0) { bcAlert('Select a product and enter a valid physical stock quantity.'); return; }
+  const item = getPhysicalSettlementSystemItem(name); if (!item) { bcAlert('Product not found in the active inventory.'); return; }
   const system = Number(item.balanceStock || 0);
   const difference = physical - system;
   const rate = getPhysicalSettlementRate(item, Number(activeCycle.year), activeCycle.crop, difference);
@@ -8745,7 +8840,7 @@ function savePhysicalInventorySettlement(event) {
   all.push(rec); savePhysicalInventorySettlements(all);
   renderPhysicalSettlementSavedList(); updatePhysicalSettlementPreview();
   document.getElementById('physicalInventorySettlementModal').dataset.editingId='';
-  alert(difference < -0.000001 ? `Physical shortage saved: ${Math.abs(difference).toFixed(3)} ${item.unit || ''}. ₹${Math.round(adjustmentValue).toLocaleString('en-IN')} recognized as physical inventory loss.` : difference > 0.000001 ? `Physical excess saved: ${difference.toFixed(3)} ${item.unit || ''}.` : 'Physical stock matched system stock.');
+  bcAlert(difference < -0.000001 ? `Physical shortage saved: ${Math.abs(difference).toFixed(3)} ${item.unit || ''}. ₹${Math.round(adjustmentValue).toLocaleString('en-IN')} recognized as physical inventory loss.` : difference > 0.000001 ? `Physical excess saved: ${difference.toFixed(3)} ${item.unit || ''}.` : 'Physical stock matched system stock.');
   renderInventoryAndPurchases(); renderFinanceOverview(); renderPondwisePnl();
 }
 function getActivePhysicalSettlementAdjustmentForPond(pondId, productName) {
@@ -9108,7 +9203,7 @@ function promptDeleteCatalogueProduct(prodName) {
 
   saveStorage();
   renderAll();
-  alert(`"${prodName}" has been removed from your catalogue.`);
+  bcAlert(`"${prodName}" has been removed from your catalogue.`);
 }
 
 function editCatalogueProduct(oldName) {
@@ -9163,7 +9258,7 @@ function editCatalogueProduct(oldName) {
 
   saveStorage();
   renderAll();
-  alert(`Product updated to "${cleanNewName}"!`);
+  bcAlert(`Product updated to "${cleanNewName}"!`);
 }
 
 function resetPurchaseForm() {
@@ -9345,14 +9440,14 @@ function handleVendorMasterSubmit(event) {
     return sameName && !sameId;
   });
   if (duplicate) {
-    alert('A vendor with this name already exists. Please use a different vendor name.');
+    bcAlert('A vendor with this name already exists. Please use a different vendor name.');
     return false;
   }
 
   if (id) {
     const index = vendors.findIndex(v => String(v?.id || '') === id);
     if (index < 0) {
-      alert('The vendor record could not be found. Please click Edit again and retry.');
+      bcAlert('The vendor record could not be found. Please click Edit again and retry.');
       return false;
     }
     const old = vendors[index];
@@ -9385,7 +9480,7 @@ function deleteVendorMaster(id) {
   const targetId = String(id || '').trim();
   const index = vendors.findIndex(v => String(v?.id || '') === targetId);
   if (index < 0) {
-    alert('Vendor record not found. Please refresh the Vendor List and try again.');
+    bcAlert('Vendor record not found. Please refresh the Vendor List and try again.');
     return false;
   }
   const v = vendors[index];
@@ -9413,8 +9508,8 @@ function deleteVendorMaster(id) {
 function populateStatementVendorsDropdown() {
   if (!statementVendorSelect) return; const list=getVendorMasterList(false); const currentVal=statementVendorSelect.value;
   if(!list.length){statementVendorSelect.innerHTML='<option value="">No Vendors Found</option>';return;}
-  statementVendorSelect.innerHTML=list.map(v=>`<option value="${escapeHtml(v.name)}">${escapeHtml(v.name)}</option>`).join('');
-  statementVendorSelect.value=(currentVal&&list.some(v=>v.name===currentVal))?currentVal:list[0].name;
+  statementVendorSelect.innerHTML = `<option value="ALL">All Vendors</option>` + list.map(v=>`<option value="${escapeHtml(v.name)}">${escapeHtml(v.name)}</option>`).join('');
+  statementVendorSelect.value=(currentVal === 'ALL' || (currentVal&&list.some(v=>v.name===currentVal))) ? currentVal : list[0].name;
 }
 
 if (vendorMasterForm) {
@@ -9464,8 +9559,11 @@ function openVendorStatement(targetVendor = null, paymentOnly = false) {
 function renderVendorStatement() {
   if (!statementVendorSelect || !statementTableBody) return;
   const statementWrapper = document.getElementById('statementPrintWrapper');
-  if (statementWrapper) statementWrapper.classList.toggle('payment-only-view', vendorPaymentOnlyMode);
   const vendorName = statementVendorSelect.value.trim();
+  const showAllVendors = vendorName === 'ALL';
+  if (statementWrapper) statementWrapper.classList.toggle('payment-only-view', vendorPaymentOnlyMode);
+  const statementVendorHeader = document.getElementById('statementVendorHeader');
+  if (statementVendorHeader) statementVendorHeader.style.display = showAllVendors ? '' : 'none';
   // Vendor Statement has its own crop filter. It must not inherit the
   // global active crop, because "All Crops" should show the complete
   // statement for the active year.
@@ -9478,13 +9576,13 @@ function renderVendorStatement() {
     return;
   }
 
-  statementAccountTitle.textContent = `${vendorName.toUpperCase()} ACCOUNT`;
+  statementAccountTitle.textContent = showAllVendors ? 'ALL VENDORS ACCOUNT' : `${vendorName.toUpperCase()} ACCOUNT`;
 
   // Statement is vendor + active YEAR scoped. Crop is applied below from
   // the statement's own filter, so Crop 1 / Crop 2 / All Crops all work.
   const vendorPurchases = purchases
     .filter(p => Number(getRecordYear(p)) === statementYear)
-    .filter(p => (p.supplier || '').trim().toLowerCase() === vendorName.toLowerCase());
+    .filter(p => showAllVendors || (p.supplier || '').trim().toLowerCase() === vendorName.toLowerCase());
   const billGroups = {};
   vendorPurchases.forEach(p => {
     const crop = p.crop || 'Crop 1';
@@ -9492,6 +9590,7 @@ function renderVendorStatement() {
     if (!billGroups[key]) {
       billGroups[key] = {
         type: 'Debit',
+        vendor: p.supplier || '',
         crop: crop,
         date: p.date,
         billNo: p.invoiceNo || '—',
@@ -9511,7 +9610,7 @@ function renderVendorStatement() {
 
   const vendorStockReturns = stockReturns
     .filter(r => Number(getRecordYear(r)) === statementYear)
-    .filter(r => (r.supplier || '').trim().toLowerCase() === vendorName.toLowerCase());
+    .filter(r => showAllVendors || (r.supplier || '').trim().toLowerCase() === vendorName.toLowerCase());
   const returnGroups = {};
   vendorStockReturns.forEach(r => {
     const crop = r.crop || 'Crop 1';
@@ -9519,6 +9618,7 @@ function renderVendorStatement() {
     if (!returnGroups[key]) {
       returnGroups[key] = {
         type: 'Credit',
+        vendor: r.supplier || '',
         crop: crop,
         date: r.date,
         billNo: r.invoiceNo || '—',
@@ -9538,13 +9638,14 @@ function renderVendorStatement() {
 
   const directTxns = vendorTransactions
     .filter(v => Number(getRecordYear(v)) === statementYear)
-    .filter(v => (v.vendor || '').trim().toLowerCase() === vendorName.toLowerCase());
+    .filter(v => showAllVendors || (v.vendor || '').trim().toLowerCase() === vendorName.toLowerCase());
 
   let allLedgerRows = [
     ...billEntries,
     ...returnEntries,
     ...directTxns.map(t => ({
       id: t.id,
+      vendor: t.vendor || '',
       type: t.type || 'Credit',
       crop: t.crop || 'Crop 1',
       date: t.date,
@@ -9627,6 +9728,7 @@ function renderVendorStatement() {
       row.account || '',
       row.type || '',
       row.crop || '',
+      row.vendor || '',
       row.date || '',
       debitVal ? debitVal.toLocaleString() : '',
       creditVal ? creditVal.toLocaleString() : '',
@@ -9643,11 +9745,12 @@ function renderVendorStatement() {
     return `
       <tr class="${rowClass}">
         <td style="font-weight:700; color:#64748b;">${srCounter++}</td>
+        ${showAllVendors ? `<td><strong>${escapeHtml(row.vendor || '—')}</strong></td>` : ''}
         <td><strong style="color:${row.crop === 'Crop 2' ? 'var(--brand-purple)' : 'var(--brand-blue)'};">${escapeHtml(row.crop)}</strong></td>
         <td><strong>${formatDate(row.date)}</strong></td>
         <td><span class="badge-paid" style="font-size:0.68rem;">Active</span></td>
         <td><strong>${escapeHtml(row.billNo || '—')}</strong></td>
-        <td style="text-align:right; font-weight:700; color:${debitVal > 0 ? '#0f172a' : '#94a3b8'};">
+        <td class="statement-debit-cell" style="text-align:right; font-weight:700; color:${debitVal > 0 ? '#0f172a' : '#94a3b8'};">
           ${debitVal > 0 ? Math.round(debitVal).toLocaleString() : ''}
         </td>
         <td style="text-align:right; font-weight:700; color:${creditVal > 0 ? 'var(--brand-green)' : '#94a3b8'};">
@@ -9660,16 +9763,41 @@ function renderVendorStatement() {
           ${escapeHtml(row.remarks)}
         </td>
         <td class="no-print" style="text-align:center;">
-          ${row.isManual ? `<button type="button" class="small-button" style="color:var(--brand-red);" onclick="deleteVendorTxn('${row.id}')">✕</button>` : ''}
+          ${row.isManual ? `<div style="display:flex;gap:.35rem;justify-content:center;">
+            <button type="button" class="small-button" data-bc-action="editVendorTxn" data-id="${escapeHtml(String(row.id))}" aria-label="Edit payment">Edit</button>
+            <button type="button" class="small-button" style="color:var(--brand-red);" data-bc-action="deleteVendorTxn" data-id="${escapeHtml(String(row.id))}" aria-label="Delete payment">✕</button>
+          </div>` : ''}
         </td>
       </tr>
     `;
   }).join('');
 }
 
+function editVendorTxn(id) {
+  const targetId = String(id || '').trim();
+  const txn = vendorTransactions.find(v => String(v?.id || '') === targetId);
+  if (!txn) {
+    bcAlert('Vendor payment record not found. Please refresh the Vendor Statement and try again.');
+    return;
+  }
+
+  editingVendorTxnId = targetId;
+  if (quickAddPaymentBox) quickAddPaymentBox.hidden = false;
+  if (advDateInput) advDateInput.value = txn.date || '';
+  if (advCropSelect) advCropSelect.value = txn.crop || 'Crop 1';
+  if (advTypeSelect) advTypeSelect.value = txn.type || 'Credit';
+  if (advBillNoInput) advBillNoInput.value = txn.billNo || '';
+  if (advVendorInput) advVendorInput.value = txn.vendor || '';
+  if (advAccountInput) advAccountInput.value = txn.account || '';
+  if (advAmountInput) advAmountInput.value = txn.amount ?? '';
+  if (advRemarksInput) advRemarksInput.value = txn.remarks || '';
+  if (saveAdvancePaymentBtn) saveAdvancePaymentBtn.textContent = 'Update Payment';
+  advAmountInput?.focus();
+}
+
 function deleteVendorTxn(id) {
   if (!confirm('Delete this payment or adjustment entry?')) return;
-  vendorTransactions = vendorTransactions.filter(v => v.id !== id);
+  vendorTransactions = vendorTransactions.filter(v => String(v.id) !== String(id));
   saveStorage();
   renderVendorStatement();
   renderFinanceOverview();
@@ -9685,7 +9813,7 @@ function copyVendorStatementSummary() {
   const totCred = stmtTotalCredit.textContent;
   const closeBal = stmtClosingBalance.textContent;
 
-  const text = `*STATEMENT OF ACCOUNT: ${vendorName.toUpperCase()}*\n`
+  const text = `*STATEMENT OF ACCOUNT: ${vendorName === 'ALL' ? 'ALL VENDORS' : vendorName.toUpperCase()}*\n`
     + `• Crop 1 Purchases: ${c1Deb}\n`
     + `• Crop 2 Purchases: ${c2Deb}\n`
     + `------------------------------\n`
@@ -9695,9 +9823,9 @@ function copyVendorStatementSummary() {
     + `(Generated via BlueCrest Farm Manager - ${new Date().toLocaleDateString()})`;
 
   navigator.clipboard.writeText(text).then(() => {
-    alert(`Statement summary for ${vendorName} copied to clipboard! You can paste it directly into WhatsApp.`);
+    bcAlert(`Statement summary for ${vendorName} copied to clipboard! You can paste it directly into WhatsApp.`);
   }).catch(() => {
-    alert(text);
+    bcAlert(text);
   });
 }
 
@@ -10077,8 +10205,8 @@ function renderStockReturnHistory() {
           </div>
         </div>
         <div class="record-actions">
-          <button type="button" class="small-button" onclick="editStockReturn('${r.id}')">Edit</button>
-          <button type="button" class="small-button" style="color:var(--brand-red);" onclick="promptDeleteStockReturn('${r.id}')">Delete</button>
+          <button type="button" class="small-button" data-bc-action="editStockReturn" data-id="${escapeHtml(String(r.id))}">Edit</button>
+          <button type="button" class="small-button" style="color:var(--brand-red);" data-bc-action="promptDeleteStockReturn" data-id="${escapeHtml(String(r.id))}">Delete</button>
         </div>
       </article>
     `;
@@ -10088,7 +10216,6 @@ function renderStockReturnHistory() {
 function setupEventListeners() {
   document.getElementById('stockTransferForm')?.addEventListener('submit', saveStockTransfer);
   document.getElementById('stockTransferCancelBtn')?.addEventListener('click', closeStockTransferModal);
-  document.getElementById('openStockTransferBtn')?.addEventListener('click', openStockTransferModal);
   document.getElementById('closeStockTransferBtn')?.addEventListener('click', closeStockTransferModal);
   ['stockTransferTo','stockTransferNumber','stockTransferAbw'].forEach(id => document.getElementById(id)?.addEventListener('input', updateStockTransferPreview));
   document.getElementById('stockTransferFrom')?.addEventListener('change', () => { updateStockTransferSeedPrice(); updateStockTransferPreview(); });
@@ -10122,14 +10249,10 @@ function setupEventListeners() {
     });
   }
 
+  // Authentication UI is temporarily disabled. Keep the logout control hidden
+  // so the current app session is not presented as a signed-in session.
   const logoutBtn = document.getElementById('logoutBtn');
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', () => {
-      if (confirm('Are you sure you want to refresh the application session?')) {
-        location.reload();
-      }
-    });
-  }
+  if (logoutBtn) logoutBtn.hidden = true;
 
   document.querySelectorAll('.step-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -10226,8 +10349,16 @@ function setupEventListeners() {
   if (invCategoryFilter) invCategoryFilter.addEventListener('change', function(){
     const value = invCategoryFilter.value || 'ALL';
     const selected = getInventoryCategorySelections();
-    selected.clear();
-    if (['Feed','Fertilizer','Medicine'].includes(value)) selected.add(value);
+    if (['Feed','Fertilizer','Medicine'].includes(value)) {
+      // Category changes intentionally replace only the category selection.
+      // Any active stock-status filter remains combined with it.
+      selected.clear();
+      selected.add(value);
+    } else if (['IN_STOCK','LOW','NEGATIVE'].includes(value)) {
+      // Status changes intentionally preserve the selected category tab(s).
+    } else {
+      selected.clear();
+    }
     syncInventoryCategoryTabs();
     renderInventoryAndPurchases();
   });
@@ -10265,6 +10396,55 @@ function setupEventListeners() {
     ledgerEntryAccount.addEventListener('focus', () => renderLedgerSuggestions(ledgerEntryAccount, ledgerAccountSuggestions, getLedgerAccounts()));
     ledgerEntryAccount.addEventListener('keydown', event => handleLedgerSuggestionKeydown(event, ledgerEntryAccount, ledgerAccountSuggestions));
   }
+  if (advVendorInput) {
+    let advanceVendorActiveIndex = -1;
+    const selectAdvanceVendorSuggestion = (index) => {
+      const items = advVendorSuggestions.querySelectorAll('.autocomplete-item');
+      if (!items.length || index < 0 || index >= items.length) return;
+      const item = items[index];
+      advVendorInput.value = item.getAttribute('data-val') || '';
+      advVendorSuggestions.hidden = true;
+      advanceVendorActiveIndex = -1;
+      if (statementVendorSelect) { statementVendorSelect.value = advVendorInput.value; renderVendorStatement(); }
+    };
+    const renderAdvanceVendorSuggestions = () => {
+      const q = advVendorInput.value.trim().toLowerCase();
+      const list = getVendorMasterList(false).map(v => v.name).filter(name => !q || name.toLowerCase().includes(q)).slice(0, 8);
+      advanceVendorActiveIndex = -1;
+      if (!list.length) { advVendorSuggestions.hidden = true; return; }
+      advVendorSuggestions.innerHTML = list.map(name => `<div class="autocomplete-item" data-val="${escapeHtml(name)}"><span class="autocomplete-title">${escapeHtml(name)}</span></div>`).join('');
+      advVendorSuggestions.hidden = false;
+      advVendorSuggestions.querySelectorAll('.autocomplete-item').forEach((item, index) => item.addEventListener('click', () => selectAdvanceVendorSuggestion(index)));
+    };
+    advVendorInput.addEventListener('input', renderAdvanceVendorSuggestions);
+    advVendorInput.addEventListener('focus', renderAdvanceVendorSuggestions);
+    advVendorInput.addEventListener('keydown', event => {
+      const items = advVendorSuggestions.querySelectorAll('.autocomplete-item');
+      if (event.key === 'ArrowDown') {
+        if (advVendorSuggestions.hidden || !items.length) { renderAdvanceVendorSuggestions(); return; }
+        event.preventDefault();
+        advanceVendorActiveIndex = Math.min(advanceVendorActiveIndex + 1, items.length - 1);
+      } else if (event.key === 'ArrowUp') {
+        if (advVendorSuggestions.hidden || !items.length) return;
+        event.preventDefault();
+        advanceVendorActiveIndex = Math.max(advanceVendorActiveIndex - 1, 0);
+      } else if (event.key === 'Enter') {
+        if (!advVendorSuggestions.hidden && advanceVendorActiveIndex >= 0 && items.length) {
+          event.preventDefault();
+          selectAdvanceVendorSuggestion(advanceVendorActiveIndex);
+        }
+        return;
+      } else if (event.key === 'Escape') {
+        advVendorSuggestions.hidden = true;
+        advanceVendorActiveIndex = -1;
+        return;
+      } else {
+        return;
+      }
+      items.forEach((item, index) => item.classList.toggle('active', index === advanceVendorActiveIndex));
+      if (advanceVendorActiveIndex >= 0) items[advanceVendorActiveIndex].scrollIntoView({ block: 'nearest' });
+    });
+  }
   if (advAccountInput) {
     advAccountInput.addEventListener('input', () => renderLedgerSuggestions(advAccountInput, advAccountSuggestions, getLedgerAccounts()));
     advAccountInput.addEventListener('focus', () => renderLedgerSuggestions(advAccountInput, advAccountSuggestions, getLedgerAccounts()));
@@ -10277,7 +10457,7 @@ function setupEventListeners() {
   }
   document.addEventListener('click', event => {
     if (!event.target.closest('.searchable-field')) {
-      [ledgerCategorySuggestions, ledgerSubCategorySuggestions, ledgerAccountSuggestions, ledgerSeasonSuggestions, advAccountSuggestions].forEach(menu => { if (menu) menu.hidden = true; });
+      [ledgerCategorySuggestions, ledgerSubCategorySuggestions, ledgerAccountSuggestions, ledgerSeasonSuggestions, advAccountSuggestions, advVendorSuggestions].forEach(menu => { if (menu) menu.hidden = true; });
     }
   });
   [ledgerEntryDate, ledgerEntryQty, ledgerEntryPrice].forEach(input => {
@@ -10329,7 +10509,10 @@ function setupEventListeners() {
     openVendorStatement(null, true);
     if (advDateInput) advDateInput.value = new Date().toISOString().split('T')[0];
   });
-  if (statementVendorSelect) statementVendorSelect.addEventListener('change', renderVendorStatement);
+  if (statementVendorSelect) statementVendorSelect.addEventListener('change', () => {
+    if (advVendorInput) advVendorInput.value = statementVendorSelect.value || '';
+    renderVendorStatement();
+  });
   if (statementCropFilter) statementCropFilter.addEventListener('change', renderVendorStatement);
   if (statementTypeFilter) statementTypeFilter.addEventListener('change', renderVendorStatement);
   if (statementRowSearch) statementRowSearch.addEventListener('input', renderVendorStatement);
@@ -10340,48 +10523,69 @@ function setupEventListeners() {
   if (openAddPaymentModalBtn) {
     openAddPaymentModalBtn.addEventListener('click', () => {
       quickAddPaymentBox.hidden = !quickAddPaymentBox.hidden;
-      if (!quickAddPaymentBox.hidden && advDateInput) {
-        advDateInput.value = new Date().toISOString().split('T')[0];
+      if (!quickAddPaymentBox.hidden) {
+        editingVendorTxnId = null;
+        if (saveAdvancePaymentBtn) saveAdvancePaymentBtn.textContent = 'Save Entry';
+        if (advDateInput) advDateInput.value = new Date().toISOString().split('T')[0];
+        if (advVendorInput) advVendorInput.value = statementVendorSelect?.value || '';
       }
     });
   }
 
-  const saveAdvancePayment = () => {
-    const vendor = statementVendorSelect.value.trim();
+  const saveAdvancePayment = async () => {
+    const vendor = advVendorInput?.value.trim() || '';
     const date = advDateInput.value || new Date().toISOString().split('T')[0];
-    const crop = activeCycle.crop;
+    const crop = advCropSelect?.value || activeCycle.crop;
     const type = advTypeSelect.value || 'Credit';
     const billNo = advBillNoInput.value.trim();
     const account = advAccountInput?.value.trim() || '';
     const amount = parseFloat(advAmountInput.value) || 0;
     const remarks = advRemarksInput.value.trim() || (type === 'Credit' ? 'Advance Payment' : 'Debit Charge');
 
+    if (!vendor || vendor === 'ALL') {
+      bcAlert('Please select one actual vendor before recording the payment. “All Vendors” is view-only.');
+      return;
+    }
+    const validVendor = getVendorMasterList(false).some(v => String(v.name || '').trim().toLowerCase() === vendor.toLowerCase());
+    if (!validVendor) {
+      bcAlert('Please select a vendor from the Vendor list.');
+      return;
+    }
     if (amount <= 0) {
-      alert('Please enter a valid amount.');
+      bcAlert('Please enter a valid amount.');
       return;
     }
 
+    const editingTxn = editingVendorTxnId
+      ? vendorTransactions.find(v => String(v?.id || '') === String(editingVendorTxnId))
+      : null;
+    const transaction = {
+      id: editingVendorTxnId || `vtxn_${Date.now()}`,
+      vendor, crop,
+      year: Number(editingTxn?.year || activeCycle.year),
+      cycleId: editingTxn?.cycleId || activeCycle.id,
+      date, type, billNo, account, amount, remarks
+    };
+    try {
+      await firebaseFirstBatchWrite('vendorTransactions', transaction);
+    } catch (err) {
+      console.error('Firestore vendor payment write error:', err);
+      bcAlert('Vendor payment could not be saved to Firebase. Local data was not changed.');
+      return;
+    }
     rememberLedgerAccount(account);
-
-    vendorTransactions.push({
-      id: `vtxn_${Date.now()}`,
-      vendor: vendor,
-      crop: crop,
-      year: activeCycle.year,
-      cycleId: activeCycle.id,
-      date: date,
-      type: type,
-      billNo: billNo,
-      account: account,
-      amount: amount,
-      remarks: remarks
-    });
-
+    const existingIndex = vendorTransactions.findIndex(v => String(v?.id || '') === String(transaction.id));
+    if (existingIndex >= 0) vendorTransactions[existingIndex] = transaction;
+    else vendorTransactions.push(transaction);
+    editingVendorTxnId = null;
+    if (saveAdvancePaymentBtn) saveAdvancePaymentBtn.textContent = 'Save Entry';
     saveStorage();
     advAmountInput.value = '';
     advRemarksInput.value = '';
     advBillNoInput.value = '';
     if (advAccountInput) advAccountInput.value = '';
+    if (advVendorInput) advVendorInput.value = vendor;
+    if (statementVendorSelect) statementVendorSelect.value = vendor;
     renderVendorStatement();
     renderFinanceOverview();
     renderFinancialLedger();
@@ -10510,11 +10714,16 @@ function setupEventListeners() {
             return !refs.includes(String(deleteTargetId).trim().toLowerCase()) &&
                    (!pondNameToDelete || !refs.includes(String(pondNameToDelete).trim().toLowerCase()));
           });
+          // Re-render immediately after the local pond deletion so the remaining
+          // pond cards keep their own Edit/Delete actions. Do not wait for the
+          // asynchronous Firebase cascade to finish.
+          saveStorage();
+          renderAll();
           if (db) {
             deletePondFromFirebaseCascade(confirmedDeleteId, pondNameToDelete, pondToDelete)
               .catch(err => {
                 console.error('Firestore pond cascade delete error:', err);
-                alert('Pond cloud deletion failed. Please check the connection and try again.');
+                bcAlert('Pond cloud deletion failed. Please check the connection and try again.');
               });
           }
         } else if (confirmedDeleteType === 'feed') {
@@ -10653,29 +10862,11 @@ async function handleMultiItemPurchaseSubmit(e) {
 
     if (!records.length) throw new Error('Please enter a valid product name, quantity and price in at least one item row.');
 
-    // For an edit, remove the old local copy only after the replacement records are valid.
+    // Firebase first: local purchase history is changed only after cloud success.
+    await firebaseFirstBatchWrite('purchases', records);
     if (editId) purchases = purchases.filter(p => String(p.id) !== String(editId));
     purchases = records.concat(purchases);
-
-    // Local persistence is the immediate source of truth for the laptop UI.
     saveStorage();
-
-    // Local save is authoritative for the laptop UI. Cloud sync is attempted
-    // separately so a Firebase permission/network problem can never erase or
-    // hide the purchase that was just entered.
-    let cloudSyncError = null;
-    if (db) {
-      try {
-        const batch = db.batch();
-        records.forEach(record => {
-          batch.set(db.collection('purchases').doc(String(record.id)), record, { merge:true });
-        });
-        await batch.commit();
-      } catch (cloudErr) {
-        cloudSyncError = cloudErr;
-        console.error('Purchase Firebase sync failed:', cloudErr);
-      }
-    }
 
     resetPurchaseForm();
     try { renderAll(); } catch (renderErr) {
@@ -10687,12 +10878,12 @@ async function handleMultiItemPurchaseSubmit(e) {
         : `✓ Purchase saved successfully (${records.length} item${records.length === 1 ? '' : 's'}).`;
     }
     if (cloudSyncError) {
-      alert(`Purchase saved on this laptop, but Firebase sync failed.\n\n${cloudSyncError?.message || cloudSyncError}\n\nThe record has NOT been removed from this laptop.`);
+      bcAlert(`Purchase saved on this laptop, but Firebase sync failed.\n\n${cloudSyncError?.message || cloudSyncError}\n\nThe record has NOT been removed from this laptop.`);
     }
   } catch (err) {
     console.error('Purchase local save failed:', err);
     if (purchaseMessageEl) purchaseMessageEl.textContent = `⚠ Purchase could not be saved: ${err?.message || err}`;
-    alert(`Purchase could not be saved.\n\n${err?.message || err}`);
+    bcAlert(`Purchase could not be saved.\n\n${err?.message || err}`);
   }
 }
 function getAvailableStockBeforeReturn(productName, category, year, crop, returnDate, excludeReturnId = '', additionalReturns = []) {
@@ -10798,7 +10989,7 @@ function getAvailableStockBeforeReturn(productName, category, year, crop, return
   return { availableQty: available, baseUnit, sources: { openingQty: opening.reduce((sum,e)=>sum+Number(e.openingQty||e.qty||0),0), purchasedQty: purchased } };
 }
 
-function handleStockReturnSubmit(e) {
+async function handleStockReturnSubmit(e) {
   e.preventDefault();
   if (returnMessageEl) returnMessageEl.textContent = '';
 
@@ -10808,14 +10999,14 @@ function handleStockReturnSubmit(e) {
   const supplier = returnSupplierInput.value.trim();
 
   if (!supplier) {
-    alert('Please enter or select a Supplier / Vendor.');
+    bcAlert('Please enter or select a Supplier / Vendor.');
     if (returnSupplierInput) returnSupplierInput.focus();
     return;
   }
 
   const rows = document.querySelectorAll('.return-item-row');
   if (rows.length === 0) {
-    alert('Please add at least one product item to return.');
+    bcAlert('Please add at least one product item to return.');
     return;
   }
 
@@ -10869,15 +11060,22 @@ function handleStockReturnSubmit(e) {
   });
 
   if (invalid) {
-    alert(invalidMessage);
+    bcAlert(invalidMessage);
     return;
   }
   if (!records.length) {
-    alert('Please ensure at least one return item row has a valid product name and quantity greater than 0.');
+    bcAlert('Please ensure at least one return item row has a valid product name and quantity greater than 0.');
     return;
   }
 
-  // Only replace an edited record after every row has passed stock validation.
+  // Firebase first: local stock-return history changes only after cloud success.
+  try {
+    await firebaseFirstBatchWrite('stockReturns', records);
+  } catch (err) {
+    console.error('Firestore stock return write error:', err);
+    bcAlert('Stock Return could not be saved to Firebase. Local data was not changed.');
+    return;
+  }
   if (editId) stockReturns = stockReturns.filter(r => String(r.id) !== String(editId));
   stockReturns = records.concat(stockReturns);
   records.forEach(rec => saveProductMemoryEntry(rec.name, rec.company, rec.unitPrice, rec.category, rec.unit));
@@ -11372,7 +11570,7 @@ function updateFormCalculations() {
   if (previewSurvival) previewSurvival.textContent = estSurvivalPct !== null ? `${estSurvivalPct.toFixed(1)}%` : '—';
 }
 
-function handleSampleSubmit(e) {
+async function handleSampleSubmit(e) {
   e.preventDefault();
   if (formMessage) formMessage.textContent = '';
 
@@ -11393,14 +11591,16 @@ function handleSampleSubmit(e) {
     cycleId: activeCycle.id
   };
 
-  const existingIdx = samples.findIndex(s => s.id === record.id);
-  if (existingIdx >= 0) samples[existingIdx] = record;
-  else samples.push(record);
-
-  saveStorage();
-  if (db) {
-    db.collection('sampling').doc(String(record.id)).set(record, { merge: true })
-      .catch(err => console.error('Firestore sampling write error:', err));
+  try {
+    await firebaseFirstBatchWrite('sampling', record);
+    const existingIdx = samples.findIndex(s => s.id === record.id);
+    if (existingIdx >= 0) samples[existingIdx] = record;
+    else samples.push(record);
+    saveStorage();
+  } catch (err) {
+    console.error('Firestore sampling write error:', err);
+    bcAlert('Sampling could not be saved to Firebase. Local data was not changed.');
+    return;
   }
   resetSampleForm();
   if (sampleModal) sampleModal.classList.remove('active');
@@ -11509,12 +11709,20 @@ function updateMotherPondToggleUI() {
 });
 updateMotherPondToggleUI();
 
-function handlePondSubmit(e) {
+async function handlePondSubmit(e) {
   e.preventDefault();
   if (pondMessageEl) pondMessageEl.textContent = '';
 
   const pondId = pondIdInput.value;
-  const pondName = pondNameInput.value.trim();
+  const pondNumberRaw = String(pondNameInput.value ?? '').trim();
+  const pondNumber = Number(pondNumberRaw);
+  if (!Number.isInteger(pondNumber) || pondNumber < 1) {
+    if (pondMessageEl) pondMessageEl.textContent = 'Enter only the pond number (for example 1, 2, 3).';
+    pondNameInput.focus();
+    return;
+  }
+  // The app owns the pond prefix: user enters only the number, and the saved/displayed name is P + number.
+  const pondName = `P${pondNumber}`;
   const currentCycleId = activeCycle && activeCycle.id ? String(activeCycle.id) : '';
   const currentYear = activeCycle && activeCycle.year ? String(activeCycle.year) : '';
   const currentCrop = activeCycle && activeCycle.crop ? String(activeCycle.crop).trim().toLowerCase() : '';
@@ -11593,12 +11801,7 @@ function handlePondSubmit(e) {
   });
 
   const previousPond = idx >= 0 ? ponds[idx] : null;
-  if (idx >= 0) {
-    pond.id = ponds[idx].id;
-    ponds[idx] = { ...ponds[idx], ...pond };
-  } else {
-    ponds.push(pond);
-  }
+  if (idx >= 0) pond.id = ponds[idx].id;
 
   // Laptop and mobile use the same cycle-scoped Firestore document key.
   // Example: `2026|crop 1__P1`. The logical pond `id` remains unchanged.
@@ -11606,18 +11809,21 @@ function handlePondSubmit(e) {
   pond.firestoreId = canonicalFirestoreId;
   if (idx >= 0) ponds[idx].firestoreId = canonicalFirestoreId;
 
-  if (db) {
-    db.collection('ponds').doc(canonicalFirestoreId).set(pond, { merge: true }).then(() => {
-      // If this pond was previously stored under the old laptop document key,
-      // remove that old document after the canonical write succeeds.
-      const oldFirestoreId = String(previousPond?.firestoreId || '').trim();
-      if (oldFirestoreId && oldFirestoreId !== canonicalFirestoreId) {
-        return db.collection('ponds').doc(oldFirestoreId).delete();
-      }
-      return null;
-    }).catch(err => console.error("Firestore pond write error:", err));
+  try {
+    if (typeof db === 'undefined' || !db) throw new Error('Firebase is not connected.');
+    await db.collection('ponds').doc(canonicalFirestoreId).set(pond, { merge: true });
+    const oldFirestoreId = String(previousPond?.firestoreId || '').trim();
+    if (oldFirestoreId && oldFirestoreId !== canonicalFirestoreId) {
+      await db.collection('ponds').doc(oldFirestoreId).delete();
+    }
+  } catch (err) {
+    console.error('Firestore pond write error:', err);
+    bcAlert('Pond could not be saved to Firebase. Local data was not changed.');
+    return;
   }
 
+  if (idx >= 0) ponds[idx] = { ...ponds[idx], ...pond };
+  else ponds.push(pond);
   ponds = dedupePondsByCycleAndName(ponds);
   saveStorage();
   resetPondForm();
@@ -11645,7 +11851,11 @@ function editPond(id) {
   if (!p) return;
 
   pondIdInput.value = p.id;
-  pondNameInput.value = p.name;
+  // Pond Number field is numeric; existing saved pond names use the P-prefix.
+  // When editing P2, show 2 in the input so the normal save path can rebuild P2.
+  const existingPondName = String(p.name || p.pondName || p.id || '').trim();
+  const existingPondNumber = existingPondName.replace(/^P/i, '');
+  pondNameInput.value = /^\d+$/.test(existingPondNumber) ? existingPondNumber : existingPondName;
   if (hatcheryNameInput) hatcheryNameInput.value = p.hatcheryName || '';
   pondLengthInput.value = p.length || '';
   pondBreadthInput.value = p.breadth || '';
@@ -11738,11 +11948,11 @@ async function handleTreatmentSubmit(e) {
   const prod = inventoryList.find(p => p.name.toLowerCase() === selectedProdName.toLowerCase());
 
   if (!prod) {
-    alert('Please select a valid product from the catalogue.');
+    bcAlert('Please select a valid product from the catalogue.');
     return;
   }
   if (prod.category === 'Feed') {
-    alert('Feed products are not used in Pond Treatment. Please select a fertilizer, mineral, medicine, or probiotic.');
+    bcAlert('Feed products are not used in Pond Treatment. Please select a fertilizer, mineral, medicine, or probiotic.');
     return;
   }
 
@@ -11774,7 +11984,7 @@ async function handleTreatmentSubmit(e) {
   const treatmentPondId = treatmentPondSelect.value;
   const treatmentPond = getActivePonds().find(p => String(p.id) === String(treatmentPondId));
   if (!treatmentPond) {
-    alert('Please select a pond from the active Year + Crop.');
+    bcAlert('Please select a pond from the active Year + Crop.');
     return;
   }
 
@@ -11796,22 +12006,19 @@ async function handleTreatmentSubmit(e) {
     notes: treatmentNotesInput.value.trim()
   };
 
-  const idx = treatments.findIndex(t => t.id === treatment.id);
-  if (idx >= 0) treatments[idx] = treatment;
-  else treatments.push(treatment);
-
-  saveStorage();
   try {
-    if (db) {
-      await db.collection('treatments').doc(String(treatment.id)).set(treatment, { merge: true });
-    }
+    await firebaseFirstBatchWrite('treatments', treatment);
+    const idx = treatments.findIndex(t => t.id === treatment.id);
+    if (idx >= 0) treatments[idx] = treatment;
+    else treatments.push(treatment);
+    saveStorage();
     resetTreatmentForm();
     closeTreatmentModal();
     renderAll();
     navigateTo('treatmentLog');
   } catch (err) {
     console.error('Firestore treatment write error:', err);
-    alert('Treatment could not be saved to cloud data. Please try again.');
+    bcAlert('Treatment could not be saved to cloud data. Please try again.');
   }
 }
 
@@ -11942,8 +12149,8 @@ function renderClinicalTable() {
           <span class="badge-paid">${pond && String(pond.pondType || '').trim() === 'mother' ? 'MOTHER • NO FCR' : (m.fcr !== null ? 'FCR ' + m.fcr.toFixed(2) : 'HEALTHY')}</span>
         </td>
         <td style="text-align: right;">
-          <button type="button" class="small-button" onclick="editSample('${s.id}')">Edit</button>
-          <button type="button" class="small-button" style="color:var(--brand-red)" onclick="promptDeleteSample('${s.id}')">Delete</button>
+          <button type="button" class="small-button" data-bc-action="editSample" data-id="${escapeHtml(String(s.id))}">Edit</button>
+          <button type="button" class="small-button" style="color:var(--brand-red)" data-bc-action="promptDeleteSample" data-id="${escapeHtml(String(s.id))}">Delete</button>
         </td>
       </tr>
     `;
@@ -12003,8 +12210,8 @@ function renderSampleCard(s) {
       </div>
       ${s.notes ? `<div style="font-size:0.8rem; color:var(--text-muted); margin-top:0.5rem;">${escapeHtml(s.notes)}</div>` : ''}
       <div class="record-actions">
-        <button type="button" class="small-button" onclick="editSample('${s.id}')">Edit</button>
-        <button type="button" class="small-button" style="color:var(--brand-red)" onclick="promptDeleteSample('${s.id}')">Delete</button>
+        <button type="button" class="small-button" data-bc-action="editSample" data-id="${escapeHtml(String(s.id))}">Edit</button>
+        <button type="button" class="small-button" style="color:var(--brand-red)" data-bc-action="promptDeleteSample" data-id="${escapeHtml(String(s.id))}">Delete</button>
       </div>
     </article>
   `;
@@ -12085,8 +12292,8 @@ function renderPondList() {
           </div>
         </div>
         <div class="record-actions">
-          <button type="button" class="small-button" onclick="editPond('${p.id}')">Edit</button>
-          <button type="button" class="small-button" style="color:var(--brand-red);" onclick="promptDeletePond('${p.id}')">Delete</button>
+          <button type="button" class="small-button" data-bc-action="editPond" data-id="${escapeHtml(String(p.id))}">Edit</button>
+          <button type="button" class="small-button" style="color:var(--brand-red);" data-bc-action="promptDeletePond" data-id="${escapeHtml(String(p.id))}">Delete</button>
         </div>
       </article>
     `;
@@ -12317,7 +12524,7 @@ function renderTreatmentLogs() {
         ${t.notes ? `<div style="font-size:0.8rem; color:var(--text-muted); margin-top:0.5rem;">${escapeHtml(t.notes)}</div>` : ''}
         <div class="record-actions">
           <button type="button" class="small-button" data-treatment-edit="${escapeHtml(String(t.id))}">Edit</button>
-          <button type="button" class="small-button" style="color:var(--brand-red)" onclick="promptDeleteTreatment('${t.id}')">Delete</button>
+          <button type="button" class="small-button" style="color:var(--brand-red)" data-bc-action="promptDeleteTreatment" data-id="${escapeHtml(String(t.id))}">Delete</button>
         </div>
       </article>
     `;
@@ -12431,7 +12638,7 @@ function saveFeedAdjustment() {
     const systemKgForSnapshot = Number(row.systemStockKg || 0);
     const fifo = getFifoPhysicalClosingValuation(row.code, 'Feed', activeCycle.year, crop, physicalKg, new Date().toISOString().slice(0,10), previous?.id || '');
     if (!fifo.ok) {
-      alert(`${row.code}: ${fifo.reason}${fifo.excessQty>0 ? ` Excess: ${fifo.excessQty.toLocaleString('en-IN',{maximumFractionDigits:3})} Kg.` : ''}`);
+      bcAlert(`${row.code}: ${fifo.reason}${fifo.excessQty>0 ? ` Excess: ${fifo.excessQty.toLocaleString('en-IN',{maximumFractionDigits:3})} Kg.` : ''}`);
       return false;
     }
     entries.push({
@@ -12452,7 +12659,7 @@ function saveFeedAdjustment() {
       version: isCorrection ? Number(previous?.version || 1) + 1 : 1
     });
   });
-  if (!entries.length) { alert('Enter physical closing stock for at least one feed code.'); return false; }
+  if (!entries.length) { bcAlert('Enter physical closing stock for at least one feed code.'); return false; }
 
   if (isCorrection) {
     const corrections = entries.map(entry => {
@@ -12480,7 +12687,7 @@ function saveFeedAdjustment() {
   saveStorage();
   renderInventoryAndPurchases();
   document.getElementById('feedAdjustmentModal')?.close();
-  alert(isCorrection ? `${crop} closing feed correction saved successfully.` : `${crop} closing feed reconciliation saved successfully.`);
+  bcAlert(isCorrection ? `${crop} closing feed correction saved successfully.` : `${crop} closing feed reconciliation saved successfully.`);
   return true;
 }
 
@@ -12860,8 +13067,12 @@ function renderInventoryAndPurchases() {
   const inventoryList = getProductInventorySummary();
   renderCropClosingStockPanel();
   const isFeedInventoryOnly = document.getElementById('inventoryView')?.classList.contains('feed-inventory-only');
-  const catVal = invCategoryFilter ? invCategoryFilter.value : 'ALL';
+  const rawFilterValue = invCategoryFilter ? invCategoryFilter.value : 'ALL';
+  const statusFilter = ['IN_STOCK','LOW','NEGATIVE'].includes(rawFilterValue) ? rawFilterValue : 'ALL';
   const selectedCategories = getInventoryCategorySelections();
+  const categoryFilter = selectedCategories.size > 0
+    ? selectedCategories
+    : (['Feed','Fertilizer','Medicine'].includes(rawFilterValue) ? new Set([rawFilterValue]) : new Set());
 
   // Inventory display is always non-zero. Category/status filters are applied
   // consistently to both the table and KPI cards. Feed/Fertilizer/Medicine tabs
@@ -12869,44 +13080,85 @@ function renderInventoryAndPurchases() {
   const nonZeroInventory = getPositiveInventoryDisplayItems();
   const matchesInventoryFilter = (item) => {
     const stock = Number(item.balanceStock || 0);
-    if (catVal === 'IN_STOCK') return stock > 0.000001;
-    if (catVal === 'LOW') {
+    const category = String(item.category || '').trim();
+    const matchesCategory = categoryFilter.size === 0 || categoryFilter.has(category);
+    let matchesStatus = true;
+    if (statusFilter === 'IN_STOCK') matchesStatus = stock > 0.000001;
+    else if (statusFilter === 'LOW') {
       const minStock = Number(item.minStock || item.minimumStock || 0);
-      return stock > 0.000001 && minStock > 0 && stock <= minStock;
-    }
-    if (catVal === 'NEGATIVE') return stock < -0.000001;
-    if (selectedCategories.size > 0) {
-      return selectedCategories.has(String(item.category || '').trim());
-    }
-    return catVal === 'ALL' || !catVal;
+      matchesStatus = stock > 0.000001 && minStock > 0 && stock <= minStock;
+    } else if (statusFilter === 'NEGATIVE') matchesStatus = stock < -0.000001;
+    return matchesCategory && matchesStatus;
   };
 
-  const inventoryForDisplay = isFeedInventoryOnly
+  const inventoryForDisplayBase = isFeedInventoryOnly
     ? inventoryList.filter(item => item.category === 'Feed' && Math.abs(Number(item.balanceStock || 0)) > 0.000001)
     : nonZeroInventory.filter(matchesInventoryFilter);
+
+  // The inventory search is a display selection, so the KPI cards must use the
+  // exact same filtered product/vendor selection as the inventory table.
+  const inventorySearchQuery = String(invSearchInput?.value || '').trim().toLowerCase();
+  const inventoryForDisplay = inventorySearchQuery
+    ? inventoryForDisplayBase.filter(item => {
+        const product = String(item.name || '').toLowerCase();
+        const company = String(item.company || '').toLowerCase();
+        const vendor = String(item.supplier || '').toLowerCase();
+        return product.includes(inventorySearchQuery)
+          || company.includes(inventorySearchQuery)
+          || vendor.includes(inventorySearchQuery);
+      })
+    : inventoryForDisplayBase;
 
   let totalPurchasedVal = 0;
   let totalUsedVal = 0;
   let totalStockVal = 0;
 
   if (isFeedInventoryOnly) {
-    // Feed-only directory keeps its existing physical KG KPIs.
-    const feedRowsForKpi = getFeedInventoryRows(inventoryList);
+    // Feed-only KPIs follow the same Company / Feed Code / Stock Status selection
+    // used by the feed directory below. Quantities stay physical KG, while
+    // Total Purchased remains an accounting value in rupees.
+    const selectedFeedCompany = document.getElementById('feedCompanyFilter')?.value || 'ALL';
+    const selectedFeedCode = document.getElementById('feedCodeFilter')?.value || 'ALL';
+    const selectedFeedStockStatus = document.getElementById('feedStockStatusFilter')?.value || 'ALL';
+    const feedSearchQuery = String(invSearchInput?.value || '').trim().toLowerCase();
+    // Single source of truth: KPI cards use exactly the same rows that the
+    // Feed Inventory table displays after Company / Feed Code / Stock Status / Search filtering.
+    const feedRowsForKpi = getFeedInventoryRows(inventoryList).filter(row => {
+      const matchesSearch = !feedSearchQuery
+        || String(row.company || '').toLowerCase().includes(feedSearchQuery)
+        || String(row.code || '').toLowerCase().includes(feedSearchQuery);
+      return matchesSearch
+        && (selectedFeedCompany === 'ALL' || row.company === selectedFeedCompany)
+        && (selectedFeedCode === 'ALL' || row.code === selectedFeedCode)
+        && (selectedFeedStockStatus === 'ALL' || row.stockStatus === selectedFeedStockStatus);
+    });
     const totalPurchasedKg = feedRowsForKpi.reduce((sum, row) => sum + (Number(row.purchasedQty) || 0), 0);
     const totalUsedKg = feedRowsForKpi.reduce((sum, row) => sum + (Number(row.usedQty) || 0), 0);
     const totalClosingKg = feedRowsForKpi.reduce((sum, row) => sum + (Number(row.closingBalance) || 0), 0);
+    const selectedFeedCodes = new Set(feedRowsForKpi.map(row => String(row.code || '').trim().toLowerCase()));
+    const totalPurchasedValue = inventoryList
+      .filter(item => String(item.category || '').trim().toLowerCase() === 'feed'
+        && selectedFeedCodes.has(String(item.name || '').trim().toLowerCase()))
+      .reduce((sum, item) => sum + (Number(item.totalPurchasedValue) || 0), 0);
     const lowStockCount = feedRowsForKpi.filter(row => Number(row.closingBalance || 0) <= 0.000001 || row.stockStatus === 'Low Stock').length;
     if (feedLowStockKpiCardEl) feedLowStockKpiCardEl.style.display = 'block';
     if (feedLowStockCountEl) feedLowStockCountEl.textContent = lowStockCount;
     if (invDistinctCountEl) invDistinctCountEl.textContent = feedRowsForKpi.filter(row => Math.abs(Number(row.closingBalance || 0)) > 0.000001).length;
-    if (invTotalPurchasedValueEl) invTotalPurchasedValueEl.textContent = `${totalPurchasedKg.toLocaleString(undefined, { maximumFractionDigits: 2 })} kg`;
+    if (invTotalPurchasedQtyEl) invTotalPurchasedQtyEl.textContent = `${totalPurchasedKg.toLocaleString(undefined, { maximumFractionDigits: 2 })} kg`;
+    if (invTotalPurchasedValueEl) invTotalPurchasedValueEl.textContent = `₹${Math.round(totalPurchasedValue).toLocaleString('en-IN')}`;
     if (invTotalUsedValueEl) invTotalUsedValueEl.textContent = `${totalUsedKg.toLocaleString(undefined, { maximumFractionDigits: 2 })} kg`;
     if (invCurrentStockValueEl) invCurrentStockValueEl.textContent = `${totalClosingKg.toLocaleString(undefined, { maximumFractionDigits: 2 })} kg`;
     if (invCurrentStockValueEl2) invCurrentStockValueEl2.textContent = `${totalClosingKg.toLocaleString(undefined, { maximumFractionDigits: 2 })} kg`;
   } else {
     // All/Fertilizer/Medicine/Feed/status filters drive every KPI card.
+    const purchasedQtyByUnit = {};
     inventoryForDisplay.forEach(item => {
       totalPurchasedVal += Number(item.totalPurchasedValue || 0);
+      const qty = Number(item.totalPurchasedQty || 0);
+      if (qty > 0) {
+        const unit = String(item.unit || 'Unit').trim() || 'Unit';
+        purchasedQtyByUnit[unit] = (purchasedQtyByUnit[unit] || 0) + qty;
+      }
       totalUsedVal += Number(item.usedValue || 0);
       totalStockVal += Number(item.stockValue || 0);
     });
@@ -12917,7 +13169,12 @@ function renderInventoryAndPurchases() {
     }).length;
     if (feedLowStockKpiCardEl) feedLowStockKpiCardEl.style.display = 'block';
     if (feedLowStockCountEl) feedLowStockCountEl.textContent = lowOrNegativeCount;
+    const purchasedQtyText = Object.entries(purchasedQtyByUnit)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([unit, qty]) => `${qty.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${unit}`)
+      .join(' • ') || '0';
     if (invDistinctCountEl) invDistinctCountEl.textContent = inventoryForDisplay.length;
+    if (invTotalPurchasedQtyEl) invTotalPurchasedQtyEl.textContent = purchasedQtyText;
     if (invTotalPurchasedValueEl) invTotalPurchasedValueEl.textContent = `₹${Math.round(totalPurchasedVal).toLocaleString()}`;
     if (invTotalUsedValueEl) invTotalUsedValueEl.textContent = `₹${Math.round(totalUsedVal).toLocaleString()}`;
     if (invCurrentStockValueEl) invCurrentStockValueEl.textContent = `₹${Math.round(totalStockVal).toLocaleString()}`;
@@ -12932,8 +13189,13 @@ function renderInventoryAndPurchases() {
     const selectedFeedStockStatus = document.getElementById('feedStockStatusFilter')?.value || 'ALL';
     const feedInventoryRows = getFeedInventoryRows(inventoryList);
     const feedCompanies = [...new Set(feedInventoryRows.map(feed => feed.company))];
+    const feedSearchQuery = String(invSearchInput?.value || '').trim().toLowerCase();
     const filteredFeedCodes = feedInventoryRows.filter(feed => {
-      return (selectedFeedCompany === 'ALL' || feed.company === selectedFeedCompany)
+      const matchesSearch = !feedSearchQuery
+        || String(feed.company || '').toLowerCase().includes(feedSearchQuery)
+        || String(feed.code || '').toLowerCase().includes(feedSearchQuery);
+      return matchesSearch
+        && (selectedFeedCompany === 'ALL' || feed.company === selectedFeedCompany)
         && (selectedFeedCode === 'ALL' || feed.code === selectedFeedCode)
         && (selectedFeedStockStatus === 'ALL' || feed.stockStatus === selectedFeedStockStatus);
     });
@@ -13051,7 +13313,7 @@ function renderInventoryAndPurchases() {
           } else {
             const minKg = Number(rawValue);
             if (!Number.isFinite(minKg) || minKg < 0) {
-              alert('Please enter a valid minimum stock in Kg.');
+              bcAlert('Please enter a valid minimum stock in Kg.');
               return;
             }
             feedMinStockKg[scopedKey] = minKg;
@@ -13250,8 +13512,8 @@ function renderInventoryAndPurchases() {
                           <strong style="color:var(--brand-blue);">₹${Math.round(totAmt).toLocaleString()}</strong>
                         </td>
                         <td style="text-align:right;">
-                          <button type="button" class="small-button" onclick="editPurchase('${p.id}')">Edit</button>
-                          <button type="button" class="small-button" style="color:var(--brand-red); margin-left:0.5rem;" onclick="promptDeletePurchase('${p.id}')">Delete</button>
+                          <button type="button" class="small-button" data-bc-action="editPurchase" data-id="${escapeHtml(String(p.id))}">Edit</button>
+                          <button type="button" class="small-button" style="color:var(--brand-red); margin-left:0.5rem;" data-bc-action="promptDeletePurchase" data-id="${escapeHtml(String(p.id))}">Delete</button>
                         </td>
                       </tr>
                     `;
@@ -13344,7 +13606,7 @@ function resetLedgerEntryForm() {
 function editLedgerEntry(id) {
   const targetId = String(id || '').trim();
   const entry = ledgerEntries.find(item => String(item?.id || '') === targetId);
-  if (!entry) { alert('Ledger entry not found. Please refresh the Ledger Statement and try again.'); return false; }
+  if (!entry) { bcAlert('Ledger entry not found. Please refresh the Ledger Statement and try again.'); return false; }
   if (ledgerEntryId) ledgerEntryId.value = entry.id;
   if (ledgerEntryDate) ledgerEntryDate.value = entry.date || '';
   if (ledgerEntryCategory) ledgerEntryCategory.value = entry.category || '';
@@ -13368,7 +13630,7 @@ function editLedgerEntry(id) {
 function deleteLedgerEntry(id) {
   const targetId = String(id || '').trim();
   const index = ledgerEntries.findIndex(item => String(item?.id || '') === targetId);
-  if (index < 0) { alert('Ledger entry not found. Please refresh the Ledger Statement and try again.'); return false; }
+  if (index < 0) { bcAlert('Ledger entry not found. Please refresh the Ledger Statement and try again.'); return false; }
   const entry = ledgerEntries[index];
   const amount = Number(entry.amount || 0).toLocaleString();
   const label = `${entry.date || 'No date'} • ${entry.category || 'Ledger'} • ${entry.subCategory || 'No sub-category'} • ₹${amount}`;
@@ -13380,7 +13642,7 @@ function deleteLedgerEntry(id) {
   return false;
 }
 
-function handleLedgerEntrySubmit(event) {
+async function handleLedgerEntrySubmit(event) {
   event.preventDefault();
   event.stopPropagation();
   const id = String(ledgerEntryId?.value || '').trim();
@@ -13406,15 +13668,24 @@ function handleLedgerEntrySubmit(event) {
   }
   if (!getLedgerAccounts().some(option => option.toLowerCase() === account.toLowerCase())) customLedgerAccounts.push(account);
   const payload = { date, category, subCategory, season, billStatus, qty, price, amount: qty * price, account, note: ledgerEntryNote?.value.trim() || '' };
+  const ledgerRecord = { ...(id ? ledgerEntries.find(item => String(item?.id || '') === id) : null), ...payload, id: id || `ledger_${Date.now()}_${Math.random().toString(36).slice(2,8)}` };
+  try {
+    await firebaseFirstBatchWrite('ledgerEntries', ledgerRecord);
+  } catch (err) {
+    console.error('Firestore ledger write error:', err);
+    if (ledgerEntryMessage) { ledgerEntryMessage.textContent = 'Ledger entry could not be saved to Firebase. Local data was not changed.'; }
+    bcAlert('Ledger entry could not be saved to Firebase. Local data was not changed.');
+    return false;
+  }
   if (id) {
     const index = ledgerEntries.findIndex(item => String(item?.id || '') === id);
-    if (index < 0) { alert('The ledger entry could not be found. Please click Edit again and retry.'); return false; }
-    ledgerEntries[index] = { ...ledgerEntries[index], ...payload, id: ledgerEntries[index].id || id };
+    if (index < 0) { bcAlert('The ledger entry could not be found. Please click Edit again and retry.'); return false; }
+    ledgerEntries[index] = ledgerRecord;
     saveStorage();
     resetLedgerEntryForm();
     if (ledgerEntryMessage) { ledgerEntryMessage.textContent = 'Ledger entry updated successfully.'; ledgerEntryMessage.style.color = ''; }
   } else {
-    ledgerEntries.push({ id: `ledger_${Date.now()}_${Math.random().toString(36).slice(2,8)}`, ...payload });
+    ledgerEntries.push(ledgerRecord);
     saveStorage();
     resetLedgerEntryForm();
     if (ledgerEntryMessage) { ledgerEntryMessage.textContent = 'Ledger entry saved successfully.'; ledgerEntryMessage.style.color = ''; }
@@ -14331,7 +14602,7 @@ document.addEventListener('change', (e) => {
   if (e.target.matches('input[name="feedFasting"]')) toggleFeedFasting();
 });
 
-function handleFeedRecordSubmit(e) {
+async function handleFeedRecordSubmit(e) {
   e.preventDefault();
   const pondId = feedRecordPondSelect.value;
   const pond = getFeedPondForCycle(pondId, activeCycle.id);
@@ -14391,6 +14662,13 @@ function handleFeedRecordSubmit(e) {
     notes
   });
 
+  try {
+    await firebaseFirstBatchWrite('feeds', record);
+  } catch (err) {
+    console.error('Firestore feed write error:', err);
+    bcAlert('Feed record could not be saved to Firebase. Local data was not changed.');
+    return;
+  }
   feedEntries = feedEntries.filter(x =>
     String(x.id) !== String(sourceId) &&
     String(x.firestoreId || '') !== String(sourceId) &&
@@ -14399,18 +14677,6 @@ function handleFeedRecordSubmit(e) {
   feedEntries.push(record);
   recalculateFeedCumulatives();
   saveStorage();
-
-  if (db) {
-    db.collection('feeds').doc(firestoreId).set(record).then(() => {
-      closeFeedRecordModal();
-      renderAll();
-    }).catch(err => {
-      console.error('Firestore feed write error:', err);
-      alert('Feed record could not be saved to cloud. Please try again.');
-    });
-    return;
-  }
-
   closeFeedRecordModal();
   renderAll();
 }
@@ -14444,7 +14710,7 @@ async function deleteFeedRecord(id) {
     renderAll();
   } catch (err) {
     console.error('Firestore feed delete error:', err);
-    alert('Feed record could not be deleted. Please try again.');
+    bcAlert('Feed record could not be deleted. Please try again.');
   }
 }
 
@@ -14566,7 +14832,7 @@ function renderFeedEntries() {
           <td class="feed-note-cell">${entry.notes ? escapeHtml(entry.notes) : '<span class="feed-muted">—</span>'}</td>
           <td class="feed-action-cell">
             <button type="button" class="feed-action-btn" onclick="openFeedRecordModal('${safeId}')">Edit</button>
-            <button type="button" class="feed-action-btn feed-delete-btn" onclick="promptDeleteFeedRecord('${safeId}')">Delete</button>
+            <button type="button" class="feed-action-btn feed-delete-btn" data-bc-action="promptDeleteFeedRecord" data-id="${escapeHtml(String(entry.id))}">Delete</button>
           </td>
         </tr>`;
       }).join('');
@@ -14725,9 +14991,10 @@ function updateStockTransferPreview() {
 }
 function openStockTransferModal(id = null) {
   const modal = document.getElementById('stockTransferModal');
-  if (!modal) return;
+  if (!modal) { console.error('Stock Transfer modal element not found.'); return; }
   if (id == null) {
-    resetStockTransferForm();
+    try { resetStockTransferForm(); }
+    catch (err) { console.error('Stock Transfer form reset error:', err); }
   } else {
     const r = stockTransfers.find(x => String(x.id) === String(id));
     if (!r) return;
@@ -14769,7 +15036,7 @@ function resetStockTransferForm() {
   const d=document.getElementById('stockTransferDate'); if(d) d.value=new Date().toISOString().slice(0,10);
   populateStockTransferPonds();
 }
-function saveStockTransfer(e) {
+async function saveStockTransfer(e) {
   e.preventDefault();
   const id = document.getElementById('stockTransferId').value || `st_${Date.now()}`;
   const date = document.getElementById('stockTransferDate').value;
@@ -14796,8 +15063,14 @@ function saveStockTransfer(e) {
   const available=getTransferCurrentNumber(fromPond.id,id);
   if (number>available) { msg.textContent=`Transferred number cannot exceed the calculated available population (${available.toLocaleString('en-IN')} pcs).`; return; }
   const record={id,date,fromPondId:fromPond.id,fromPond:fromPond.name||fromPond.id,toPondId:toPond.id,toPond:toPond.name||toPond.id,number,transferredNumber:number,abw,transferAbw:abw,seedPrice,seedPricePerPl:seedPrice,seedPriceSource:'motherPond',seedCost:Number((number*seedPrice).toFixed(2)),seedCostTransferred:Number((number*seedPrice).toFixed(2)),biomass:Number((number*abw/1000).toFixed(3)),transferredBiomass:Number((number*abw/1000).toFixed(3)),year:activeCycle.year,crop:activeCycle.crop,cycleId:activeCycle.id,notes};
+  try {
+    await firebaseFirstBatchWrite('stockTransfers', record);
+  } catch(err) {
+    console.error('Firestore stock transfer write error:',err);
+    bcAlert('Stock transfer could not be saved to Firebase. Local data was not changed.');
+    return;
+  }
   stockTransfers=stockTransfers.filter(x=>String(x.id)!==String(id)); stockTransfers.push(record); saveStorage();
-  if(db) db.collection('stockTransfers').doc(String(id)).set(record).catch(err=>console.error('Firestore stock transfer write error:',err));
   resetStockTransferForm();
   closeStockTransferModal();
   renderAll();
@@ -14807,7 +15080,7 @@ function renderStockTransfers() {
   const rows=[...getActiveStockTransfers()].sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
   const count=document.getElementById('stockTransferCount'); if(count) count.textContent=`${rows.length} ${rows.length===1?'transfer':'transfers'}`;
   if(!rows.length){ body.innerHTML='<tr><td colspan="10" style="text-align:center;color:#64748b;padding:1.2rem;">No stock transfers recorded in this cycle.</td></tr>'; return; }
-  body.innerHTML=rows.map((r,i)=>`<tr><td>${i+1}</td><td>${formatDate(r.date)}</td><td><strong>${escapeHtml(getTransferPondName(r.fromPondId||r.fromPond))}</strong></td><td><strong>${escapeHtml(getTransferPondName(r.toPondId||r.toPond))}</strong></td><td>${Number(r.number||r.transferredNumber||0).toLocaleString('en-IN')}</td><td>${Number(r.abw||r.transferAbw||0).toFixed(2)} g</td><td><strong>${Number(r.biomass||r.transferredBiomass||0).toFixed(2)} kg</strong></td><td><strong>₹${Math.round(Number(r.seedCost||r.seedCostTransferred||0)).toLocaleString('en-IN')}</strong></td><td>${r.notes?escapeHtml(r.notes):'—'}</td><td style="text-align:right;"><button type="button" class="small-button" onclick="editStockTransfer('${String(r.id).replace(/'/g,"\\'")}')">Edit</button> <button type="button" class="small-button" style="color:var(--brand-red);" onclick="deleteStockTransfer('${String(r.id).replace(/'/g,"\\'")}')">Delete</button></td></tr>`).join('');
+  body.innerHTML=rows.map((r,i)=>`<tr><td>${i+1}</td><td>${formatDate(r.date)}</td><td><strong>${escapeHtml(getTransferPondName(r.fromPondId||r.fromPond))}</strong></td><td><strong>${escapeHtml(getTransferPondName(r.toPondId||r.toPond))}</strong></td><td>${Number(r.number||r.transferredNumber||0).toLocaleString('en-IN')}</td><td>${Number(r.abw||r.transferAbw||0).toFixed(2)} g</td><td><strong>${Number(r.biomass||r.transferredBiomass||0).toFixed(2)} kg</strong></td><td><strong>₹${Math.round(Number(r.seedCost||r.seedCostTransferred||0)).toLocaleString('en-IN')}</strong></td><td>${r.notes?escapeHtml(r.notes):'—'}</td><td style="text-align:right;"><button type="button" class="small-button" data-bc-action="editStockTransfer" data-id="${escapeHtml(String(r.id))}">Edit</button> <button type="button" class="small-button" style="color:var(--brand-red);" data-bc-action="deleteStockTransfer" data-id="${escapeHtml(String(r.id))}">Delete</button></td></tr>`).join('');
 }
 function editStockTransfer(id) {
   const r = stockTransfers.find(x => String(x.id) === String(id));
@@ -15890,9 +16163,9 @@ function renderHarvestList() {
             <div class="sample-value"><span>Value</span><strong style="color:var(--brand-green);">₹${Math.round(val).toLocaleString()}</strong></div>
             <div style="margin-left:0.5rem; display:flex; gap:0.5rem; align-items:center;">
               ${harvestPondLocked
-                ? `<button type="button" class="small-button" data-bc-harvest-reactivate="1" style="color:var(--brand-blue); font-weight:800;" onclick="window.blueCrestReactivatePond('${String(harvestPondId).replace(/'/g,"\\'")}', '${String(harvestCycleId).replace(/'/g,"\\'")}')">🔓 Reactivate Pond</button>`
-                : `<button type="button" class="small-button" style="color:var(--brand-blue); font-weight:700;" onclick="editHarvest('${h.id}')">Edit</button>
-                   <button type="button" class="small-button" style="color:var(--brand-red); font-weight:700;" onclick="promptDeleteHarvest('${h.id}')">Delete</button>`
+                ? `<button type="button" class="small-button" data-bc-harvest-reactivate="1" style="color:var(--brand-blue); font-weight:800;" data-bc-action="reactivatePond" data-pond-id="${escapeHtml(String(harvestPondId))}" data-cycle-id="${escapeHtml(String(harvestCycleId))}">🔓 Reactivate Pond</button>`
+                : `<button type="button" class="small-button" style="color:var(--brand-blue); font-weight:700;" data-bc-action="editHarvest" data-id="${escapeHtml(String(h.id))}">Edit</button>
+                   <button type="button" class="small-button" style="color:var(--brand-red); font-weight:700;" data-bc-action="promptDeleteHarvest" data-id="${escapeHtml(String(h.id))}">Delete</button>`
               }
             </div>
           </div>
@@ -16041,11 +16314,11 @@ async function submitHarvestFormDirectly() {
     const pc = p.crop || p.cropCycle || activeCycle.crop;
     return cycleIdFor(py, pc) === activeCycleId;
   }) || ponds.find(p => String(p.id) === String(pondId));
-  if (!pond) { alert('Please select a valid pond.'); return; }
+  if (!pond) { bcAlert('Please select a valid pond.'); return; }
   const pondYear = Number(pond.year || pond.cropYear || activeCycle.year);
   const pondCrop = pond.crop || pond.cropCycle || activeCycle.crop;
   const pondCycleId = cycleIdFor(pondYear, pondCrop);
-  if (pondCycleId !== activeCycleId) { alert('Selected pond is not in the active Year/Crop cycle.'); return; }
+  if (pondCycleId !== activeCycleId) { bcAlert('Selected pond is not in the active Year/Crop cycle.'); return; }
   // Harvest belongs to the currently selected Year + Crop. Do not inherit a
   // stale/malformed cycleId from an older pond record.
   const crop = String(activeCycle.crop || pondCrop || 'Crop 1').trim();
@@ -16076,17 +16349,12 @@ async function submitHarvestFormDirectly() {
     feedConsumed: feed
   };
 
-  const existingIndex = harvests.findIndex(h => String(h.id) === String(newHarvest.id));
-  if (existingIndex >= 0) {
-    harvests[existingIndex] = { ...harvests[existingIndex], ...newHarvest };
-  } else {
-    harvests.push(newHarvest);
-  }
-
   try {
-    if (db) {
-      await db.collection('harvests').doc(newHarvest.id).set(newHarvest, { merge: true });
-    }
+    if (typeof db === 'undefined' || !db) throw new Error('Firebase is not connected.');
+    await db.collection('harvests').doc(newHarvest.id).set(newHarvest, { merge: true });
+    const existingIndex = harvests.findIndex(h => String(h.id) === String(newHarvest.id));
+    if (existingIndex >= 0) harvests[existingIndex] = { ...harvests[existingIndex], ...newHarvest };
+    else harvests.push(newHarvest);
     saveStorage();
     // A Full/Final Harvest must immediately close the pond. Do this here,
     // after the harvest has been successfully written, so the lock does not
@@ -16108,20 +16376,20 @@ async function submitHarvestFormDirectly() {
         await lockFn(newHarvest, {mode:'save', forceClose:true});
       } catch (lockErr) {
         console.error('Automatic pond lock after Full/Final Harvest failed:', lockErr);
-        alert('Harvest was saved, but the pond could not be locked automatically. Please check Firebase/cloud connection.');
+        bcAlert('Harvest was saved, but the pond could not be locked automatically. Please check Firebase/cloud connection.');
       }
     }
     closeHarvestModal();
     renderAll();
   } catch (err) {
     console.error('Firestore harvest write error:', err);
-    alert('Harvest could not be saved to cloud data. Please try again.');
+    bcAlert('Harvest could not be saved to cloud data. Please try again.');
   }
 }
 
 function editHarvest(id) {
   const h = harvests.find(item => String(item.id) === String(id));
-  if (!h) { alert('Harvest record not found.'); return; }
+  if (!h) { bcAlert('Harvest record not found.'); return; }
 
   const pondId = h.pondId || h.pond || h.pondName;
 
@@ -16136,7 +16404,7 @@ function editHarvest(id) {
   const harvestCycleId = derivedHarvestCycleId || storedHarvestCycleId;
   const activeCycleId = cycleIdFor(activeCycle?.year, activeCycle?.crop);
   if (harvestCycleId !== activeCycleId) {
-    alert(`This harvest belongs to ${harvestYear || 'another'} • ${harvestCrop || 'another crop'} cycle. Switch to that Year/Crop cycle before editing.`);
+    bcAlert(`This harvest belongs to ${harvestYear || 'another'} • ${harvestCrop || 'another crop'} cycle. Switch to that Year/Crop cycle before editing.`);
     return;
   }
 
@@ -16149,9 +16417,9 @@ function editHarvest(id) {
     const pc = String(p.crop || p.cropCycle || harvestCrop || activeCycle.crop).trim();
     return cycleIdFor(py, pc) === activeCycleId;
   });
-  if (!pondForHarvest) { alert('The pond linked to this harvest record could not be found in this Year/Crop cycle.'); return; }
+  if (!pondForHarvest) { bcAlert('The pond linked to this harvest record could not be found in this Year/Crop cycle.'); return; }
   if (typeof window.blueCrestIsHarvestPondClosed === 'function' && window.blueCrestIsHarvestPondClosed(h)) {
-    alert(`🔒 Pond Closed\n\n${pondForHarvest.name||pondForHarvest.id} is closed after Full/Final Harvest. No new, edited, or deleted data can be entered until this pond is reactivated from the laptop.`);
+    bcAlert(`🔒 Pond Closed\n\n${pondForHarvest.name||pondForHarvest.id} is closed after Full/Final Harvest. No new, edited, or deleted data can be entered until this pond is reactivated from the laptop.`);
     return;
   }
 
@@ -16178,7 +16446,7 @@ function promptDeleteHarvest(id) {
   const h = harvests.find(item => String(item.id) === String(id));
   if (h && typeof window.blueCrestIsHarvestPondClosed === 'function' && window.blueCrestIsHarvestPondClosed(h)) {
     const ctx = window.blueCrestGetHarvestLockContext ? window.blueCrestGetHarvestLockContext(h) : null;
-    alert(`🔒 Pond Closed\n\n${ctx?.pond?.name || ctx?.pondId || h.pondId || h.pond || 'This pond'} is closed after Full/Final Harvest. No new, edited, or deleted data can be entered until this pond is reactivated from the laptop.`);
+    bcAlert(`🔒 Pond Closed\n\n${ctx?.pond?.name || ctx?.pondId || h.pondId || h.pond || 'This pond'} is closed after Full/Final Harvest. No new, edited, or deleted data can be entered until this pond is reactivated from the laptop.`);
     return;
   }
   deleteTargetId = id;
@@ -16292,131 +16560,148 @@ function addBackupRows(moduleName, dataset, rows) {
 }
 
 function exportCSV() {
-  const rows = [['Module', 'Record ID', 'Field', 'Value', 'Type']];
-  Object.entries(BACKUP_DATASETS).forEach(([moduleName, getter]) => {
-    addBackupRows(moduleName, getter(), rows);
-  });
-
+  const headers = ['Date of Purchase','Crop','Invoice Number','Vendor','Category','Product Name','Company','Quantity','Unit','Pack Size','Stock Unit','Unit Price'];
+  const rows = [headers];
+  const source = Array.isArray(purchases) ? purchases : [];
+  source.forEach(p => rows.push([
+    p.date || '',
+    p.crop || '',
+    p.invoiceNo || '',
+    p.supplier || '',
+    p.category || '',
+    p.name || '',
+    p.company || '',
+    p.qty ?? '',
+    p.unit || '',
+    p.packSize ?? '',
+    p.stockUnit || '',
+    p.unitPrice ?? ''
+  ]));
   const csv = '\uFEFF' + rows.map(row => row.map(csvEscape).join(',')).join('\r\n');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = `bluecrest_backup_${new Date().toISOString().slice(0,10)}.csv`;
+  link.download = `bluecrest_purchase_${new Date().toISOString().slice(0,10)}.csv`;
   document.body.appendChild(link);
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
-  alert('CSV backup created successfully for all main modules.');
-}
-
-function parseBackupValue(value, type) {
-  if (type === 'null') return null;
-  if (type === 'number') return value === '' ? 0 : Number(value);
-  if (type === 'boolean') return value === 'true';
-  return value;
-}
-
-function setNestedBackupValue(target, path, value, type) {
-  if (!path) return;
-  const parts = [];
-  const re = /([^.[\]]+)|\[(\d+)\]/g;
-  let match;
-  while ((match = re.exec(path))) parts.push(match[2] !== undefined ? Number(match[2]) : match[1]);
-  let cursor = target;
-  parts.forEach((part, index) => {
-    const last = index === parts.length - 1;
-    if (last) {
-      cursor[part] = parseBackupValue(value, type);
-      return;
-    }
-    const next = parts[index + 1];
-    if (cursor[part] === undefined || cursor[part] === null) {
-      cursor[part] = typeof next === 'number' ? [] : {};
-    }
-    cursor = cursor[part];
-  });
-}
-
-function rebuildBackupDataset(rows, moduleName) {
-  const moduleRows = rows.filter(r => r.module === moduleName);
-  if (!moduleRows.length) return null;
-
-  if (moduleName === 'Settings / Catalogue') {
-    const result = {};
-    moduleRows.forEach(r => setNestedBackupValue(result, r.field, r.value, r.type));
-    return result;
-  }
-
-  const byId = new Map();
-  moduleRows.forEach(r => {
-    if (!byId.has(r.recordId)) byId.set(r.recordId, {});
-    setNestedBackupValue(byId.get(r.recordId), r.field, r.value, r.type);
-  });
-  return [...byId.values()];
+  bcAlert(`Purchase CSV exported successfully (${source.length} purchase item${source.length === 1 ? '' : 's'}).`);
 }
 
 function handleImportCSV(e) {
   const file = e.target.files?.[0];
   if (!file) return;
+  const input = e.target;
+  const normaliseHeader = v => String(v ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
+  const headerAliases = {
+    'date of purchase': ['date of purchase','date'],
+    'crop': ['crop','crop / cycle'],
+    'invoice number': ['invoice number','invoice no','invoice no.','inovice number','inovice no','inovice no.'],
+    'vendor': ['vendor','supplier'],
+    'category': ['category'],
+    'product name': ['product name','product','name'],
+    'company': ['company'],
+    'quantity': ['quantity','qty'],
+    'unit': ['unit'],
+    'pack size': ['pack size','packsize','pack'],
+    'stock unit': ['stock unit','stockunit'],
+    'unit price': ['unit price','unitprice','price']
+  };
+  const findColumnMap = header => {
+    const map = {};
+    Object.entries(headerAliases).forEach(([key, aliases]) => {
+      const idx = header.findIndex(h => aliases.includes(h));
+      if (idx >= 0) map[key] = idx;
+    });
+    return map;
+  };
+  const clean = v => String(v ?? '').trim();
+  const keyName = v => clean(v).toLowerCase();
+  const keyProduct = (name, company, category) => keyName(name); // Product identity follows the app's existing catalogue/inventory name matching.
+
   const reader = new FileReader();
   reader.onload = event => {
     try {
       const parsed = csvParse(event.target.result || '');
-      if (!parsed.length) throw new Error('Empty CSV');
-      const header = parsed[0].map(v => v.trim().toLowerCase());
-      const required = ['module', 'record id', 'field', 'value', 'type'];
-      if (!required.every(name => header.includes(name))) {
-        throw new Error('This is not a BlueCrest backup CSV.');
+      if (!parsed.length) throw new Error('Empty CSV.');
+      const header = parsed[0].map(normaliseHeader);
+      const idx = findColumnMap(header);
+      const required = ['date of purchase','crop','invoice number','vendor','category','product name','company','quantity','unit','pack size','stock unit','unit price'];
+      const missing = required.filter(k => idx[k] === undefined);
+      if (missing.length) throw new Error(`Purchase CSV is missing required column(s): ${missing.join(', ')}.`);
+
+      const rows = parsed.slice(1).filter(r => r.some(v => clean(v) !== ''));
+      if (!rows.length) throw new Error('No purchase records found in the CSV.');
+
+      const incoming = rows.map((r, n) => {
+        const get = k => clean(r[idx[k]]);
+        const qty = Number(get('quantity').replace(/,/g,''));
+        const price = Number(get('unit price').replace(/,/g,''));
+        if (!get('product name')) throw new Error(`Row ${n + 2}: Product Name is required.`);
+        if (!get('vendor')) throw new Error(`Row ${n + 2}: Vendor is required.`);
+        if (!Number.isFinite(qty) || qty <= 0) throw new Error(`Row ${n + 2}: Quantity must be greater than zero.`);
+        if (!Number.isFinite(price) || price <= 0) throw new Error(`Row ${n + 2}: Unit Price must be greater than zero.`);
+        const unit = get('unit') || 'Kg';
+        const packSizeRaw = get('pack size');
+        const packSize = Number(packSizeRaw.replace(/,/g,''));
+        const stockUnit = get('stock unit') || unit;
+        const category = get('category') || 'Other Product';
+        const company = get('company') || 'Local';
+        const feed = category.toLowerCase() === 'feed';
+        const bagUnit = ['bag/pkt','bag','pkt'].includes(unit.toLowerCase());
+        const pack = Number.isFinite(packSize) && packSize > 0 ? packSize : (bagUnit && feed ? 25 : 1);
+        const total = feed && bagUnit && stockUnit.toLowerCase() === 'kg' ? qty * pack * price : qty * price;
+        const date = get('date of purchase') || new Date().toISOString().slice(0,10);
+        const crop = get('crop') || (typeof activeCycle !== 'undefined' ? activeCycle.crop : 'Crop 1') || 'Crop 1';
+        const year = Number((date.match(/\b(20\d{2})\b/) || [])[1] || (typeof activeCycle !== 'undefined' ? activeCycle.year : new Date().getFullYear()));
+        return { date, year, crop, cycleId: typeof cycleIdFor === 'function' ? cycleIdFor(year, crop) : '', invoiceNo:get('invoice number'), supplier:get('vendor'), category, name:get('product name'), company, qty, unit, packSize:pack, stockUnit, unitPrice:price, invoiceUnitPrice:feed ? price : null, finalUnitPrice:feed ? price : null, totalAmount:total };
+      });
+
+      const existingVendorKeys = new Set((Array.isArray(vendors) ? vendors : []).map(v => keyName(v?.name)).filter(Boolean));
+      const newVendors = [];
+      const seenVendors = new Set();
+      incoming.forEach(r => { const k=keyName(r.supplier); if(k && !existingVendorKeys.has(k) && !seenVendors.has(k)){seenVendors.add(k);newVendors.push(r.supplier);} });
+
+      const existingProductKeys = new Set((Array.isArray(masterCatalogue) ? masterCatalogue : []).map(p => keyProduct(p?.name,p?.company,p?.category)).filter(Boolean));
+      const newProducts = [];
+      const seenProducts = new Set();
+      incoming.forEach(r => { const k=keyProduct(r.name,r.company,r.category); if(k && !existingProductKeys.has(k) && !seenProducts.has(k)){seenProducts.add(k);newProducts.push(r);} });
+
+      const summary = [];
+      if (newVendors.length) summary.push(`New vendor${newVendors.length === 1 ? '' : 's'}: ${newVendors.join(', ')}`);
+      if (newProducts.length) summary.push(`New product${newProducts.length === 1 ? '' : 's'}: ${newProducts.map(r => r.name).join(', ')}`);
+      if (summary.length) {
+        const ok = confirm(`This Purchase CSV contains new master data.\n\n${summary.join('\n')}\n\nAdd the new vendor/product records to Master Data and continue importing the purchases?`);
+        if (!ok) return;
       }
 
-      const idx = Object.fromEntries(header.map((name, i) => [name, i]));
-      const rows = parsed.slice(1).filter(r => r.length >= 5).map(r => ({
-        module: r[idx['module']],
-        recordId: r[idx['record id']],
-        field: r[idx['field']],
-        value: r[idx['value']],
-        type: r[idx['type']]
-      }));
+      if (!Array.isArray(vendors)) vendors = [];
+      newVendors.forEach(name => {
+        vendors.push({ id:`vendor_${Date.now()}_${Math.random().toString(36).slice(2,8)}`, name, company:'', mobile:'', address:'', type:'Account Vendor', active:true });
+      });
 
-      const restore = name => rebuildBackupDataset(rows, name);
-      const restoredPonds = restore('Pond & Cycle Setup');
-      const restoredFeeds = restore('Feed Entry');
-      const restoredSamples = restore('Sampling');
-      const restoredHarvests = restore('Harvest');
-      const restoredPurchases = restore('Purchase & Inventory');
-      const restoredReturns = restore('Stock Return');
-      const restoredStockTransfers = restore('Stock Transfer');
-      const restoredTreatments = restore('Pond Care / Treatment');
-      const restoredVendors = restore('Vendors');
-      const restoredLedger = restore('Ledger');
-      const restoredSettings = restore('Settings / Catalogue');
+      if (!Array.isArray(masterCatalogue)) masterCatalogue = [];
+      newProducts.forEach(r => {
+        masterCatalogue.push({ name:r.name, company:r.company, category:r.category, unit:r.unit, unitPrice:r.unitPrice, packSize:r.packSize, stockUnit:r.stockUnit });
+      });
 
-      if (restoredPonds) ponds = restoredPonds;
-      if (restoredFeeds) feedEntries = restoredFeeds.map(normalizeFeedEntry);
-      if (restoredSamples) samples = restoredSamples;
-      if (restoredHarvests) harvests = restoredHarvests;
-      if (restoredPurchases) purchases = restoredPurchases;
-      if (restoredReturns) stockReturns = restoredReturns;
-      if (restoredStockTransfers) stockTransfers = restoredStockTransfers;
-      if (restoredTreatments) treatments = restoredTreatments;
-      if (restoredVendors) vendorTransactions = restoredVendors;
-      if (restoredLedger) ledgerEntries = restoredLedger;
-      if (restoredSettings) {
-        customLedgerSubcategories = restoredSettings.customLedgerSubcategories || [];
-        customLedgerAccounts = restoredSettings.customLedgerAccounts || [];
-        masterCatalogue = restoredSettings.masterCatalogue || [];
-      }
-
+      const imported = incoming.map((r, i) => ({ id:`pur_${Date.now()}_${i}_${Math.random().toString(36).slice(2,8)}`, ...r }));
+      purchases = imported.concat(Array.isArray(purchases) ? purchases : []);
       saveStorage();
-      recalculateCumulatives();
-      renderAll();
-      alert('CSV backup restored successfully across all main modules.');
+      if (typeof ensureVendorMaster === 'function') ensureVendorMaster();
+      if (typeof renderInventoryAndPurchases === 'function') renderInventoryAndPurchases();
+      if (typeof renderVendorMaster === 'function') renderVendorMaster();
+      if (typeof populatePurchaseVendorSelect === 'function') populatePurchaseVendorSelect('');
+      if (typeof populateStatementVendorsDropdown === 'function') populateStatementVendorsDropdown();
+      if (typeof renderAll === 'function') { try { renderAll(); } catch (renderErr) { console.warn('Purchase import saved; dashboard refresh had an error:', renderErr); } }
+      bcAlert(`Purchase CSV imported successfully.\n\n${imported.length} purchase item${imported.length === 1 ? '' : 's'} imported${newVendors.length ? `\n${newVendors.length} new vendor${newVendors.length === 1 ? '' : 's'} added` : ''}${newProducts.length ? `\n${newProducts.length} new product${newProducts.length === 1 ? '' : 's'} added` : ''}.`);
     } catch (err) {
-      console.error('CSV restore error:', err);
-      alert(`Unable to restore CSV backup: ${err.message}`);
+      console.error('Purchase CSV import error:', err);
+      bcAlert(`Unable to import Purchase CSV: ${err.message}`);
     } finally {
-      e.target.value = '';
+      input.value = '';
     }
   };
   reader.readAsText(file);
@@ -16435,9 +16720,11 @@ document.addEventListener('click',function(e){
   } else {
     if (selected.has(cat)) selected.delete(cat); else selected.add(cat);
     const filter=document.getElementById('invCategoryFilter');
-    // The dropdown cannot represent multiple categories, so it stays on All
-    // when more than one quick-tab is selected.
-    if(filter) filter.value = selected.size === 1 ? [...selected][0] : 'ALL';
+    // Preserve an active status filter when category tabs change. The dropdown
+    // cannot display both dimensions, so status remains visible when active.
+    const current = filter?.value || 'ALL';
+    const statusActive = ['IN_STOCK','LOW','NEGATIVE'].includes(current);
+    if (filter) filter.value = statusActive ? current : (selected.size === 1 ? [...selected][0] : 'ALL');
   }
   syncInventoryCategoryTabs();
   renderInventoryAndPurchases();
@@ -16453,73 +16740,6 @@ document.addEventListener('change', (e) => {
 });
 </script>
 
-
-<!-- Navigation safety layer: keeps sidebar navigation functional even if another startup module fails. -->
-<script id="sidebar-navigation-safety">
-(function(){
-  function bindSidebarNavigation(){
-    const sidebar = document.getElementById('appSidebar');
-    if (!sidebar || sidebar.dataset.navSafetyBound === '1') return;
-    sidebar.dataset.navSafetyBound = '1';
-
-    sidebar.addEventListener('click', function(event){
-      const groupHeader = event.target.closest('.nav-group-header');
-      if (groupHeader && sidebar.contains(groupHeader)) {
-        const group = groupHeader.closest('.nav-group');
-        if (group && typeof window.toggleNavGroup === 'function') {
-          event.preventDefault();
-          event.stopImmediatePropagation();
-          window.toggleNavGroup(group.id);
-        }
-        return;
-      }
-
-      const routeButton = event.target.closest('.nav-item[data-route], .nav-sub-item[data-route]');
-      if (routeButton && sidebar.contains(routeButton)) {
-        const route = routeButton.dataset.route;
-        if (route && typeof window.navigateTo === 'function') {
-          event.preventDefault();
-          event.stopImmediatePropagation();
-          window.navigateTo(route);
-        }
-        return;
-      }
-
-      const statementButton = event.target.closest('#vendorStatementNavBtn');
-      if (statementButton && typeof window.openVendorStatement === 'function') {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        window.openVendorStatement();
-        return;
-      }
-
-      const paymentButton = event.target.closest('#vendorPaymentsNavBtn');
-      if (paymentButton && typeof window.openVendorStatement === 'function') {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        window.openVendorStatement(null, true);
-        const dateInput = document.getElementById('advDate');
-        if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
-      }
-    }, true);
-
-    const toggle = document.getElementById('sidebarToggle');
-    if (toggle && !toggle.dataset.navSafetyBound) {
-      toggle.dataset.navSafetyBound = '1';
-      toggle.addEventListener('click', function(){
-        const appSidebar = document.getElementById('appSidebar');
-        if (appSidebar) appSidebar.classList.toggle('collapsed');
-      });
-    }
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', bindSidebarNavigation, {once:true});
-  } else {
-    bindSidebarNavigation();
-  }
-})();
-</script>
 
 <script id="bluecrest-purchase-modal-js">
 (function(){
@@ -16635,24 +16855,19 @@ document.addEventListener('change', (e) => {
       });
       if(!records.length) throw new Error('Enter a valid product name, quantity and price.');
       const editId=(idEl?.value || '').trim();
+      await firebaseFirstBatchWrite('purchases', records);
       if(editId) purchases=purchases.filter(p=>String(p.id)!==editId);
       purchases=records.concat(purchases);
       localStorage.setItem(STORAGE_KEYS.PURCHASES,JSON.stringify(purchases));
-      // Force the history to render from the newly saved in-memory array.
       if(typeof renderInventoryAndPurchases==='function') renderInventoryAndPurchases();
       if(typeof renderAll==='function') { try { renderAll(); } catch(renderErr) { console.warn('Purchase saved; dashboard refresh had an error:',renderErr); } }
       if(msg) msg.textContent=`✓ Purchase saved successfully (${records.length} item${records.length===1?'':'s'}).`;
       if(btn){btn.disabled=true;setTimeout(()=>btn.disabled=false,800);}
-      // Cloud is deliberately secondary to the confirmed local save.
-      if(typeof db!=='undefined' && db){
-        try { const batch=db.batch(); records.forEach(r=>batch.set(db.collection('purchases').doc(String(r.id)),r,{merge:true})); await batch.commit(); }
-        catch(cloudErr){ console.error('Purchase Firebase sync failed:',cloudErr); if(msg) msg.textContent=`✓ Saved locally. ⚠ Firebase sync failed: ${cloudErr.message||cloudErr}`; }
-      }
       if(typeof resetPurchaseForm==='function') resetPurchaseForm();
     } catch(err) {
       console.error('DIRECT PURCHASE SAVE ERROR',err);
       if(msg) msg.textContent=`⚠ ${err.message||err}`;
-      alert(`Purchase could not be saved.\n\n${err.message||err}`);
+      bcAlert(`Purchase could not be saved.\n\n${err.message||err}`);
     }
     return false;
   }
@@ -16666,52 +16881,11 @@ document.addEventListener('change', (e) => {
   window.blueCrestDirectPurchaseSaveTest=directPurchaseSave;
 })();
 </script>
-<script id="bluecrest-purchase-dummy-test">
-window.blueCrestPurchaseDummyTest = function(){
-  const result = {
-    appLoaded: typeof purchases !== 'undefined',
-    saveHandlerLoaded: typeof handleMultiItemPurchaseSubmit === 'function',
-    dbAvailable: typeof db !== 'undefined' && !!db,
-    purchaseCountBefore: Array.isArray(purchases) ? purchases.length : null,
-    localStorageKey: (typeof STORAGE_KEYS !== 'undefined' && STORAGE_KEYS.PURCHASES) || 'shrimp_app_purchases'
-  };
-  if (!result.appLoaded) throw new Error('BlueCrest app did not initialize.');
-  const dummy = {
-    id: `dummy_feed_test_${Date.now()}`, date: new Date().toISOString().slice(0,10),
-    year: Number(activeCycle?.year || new Date().getFullYear()), crop: activeCycle?.crop || 'Crop 1',
-    cycleId: cycleIdFor(activeCycle?.year || new Date().getFullYear(), activeCycle?.crop || 'Crop 1'),
-    invoiceNo: 'DUMMY-TEST', name: 'DUMMY CPF FEED', company: 'CPF', supplier: 'DUMMY VENDOR',
-    category: 'Feed', qty: 1, unit: 'Bag/Pkt', packSize: 25, stockUnit: 'Kg',
-    unitPrice: 100, invoiceUnitPrice: 105, finalUnitPrice: 100, totalAmount: 2500
-  };
-  purchases.unshift(dummy); saveStorage(); renderAll();
-  result.purchaseCountAfter = purchases.length;
-  result.savedLocally = JSON.parse(localStorage.getItem(STORAGE_KEYS.PURCHASES)||'[]').some(p=>p.id===dummy.id);
-  if (db) {
-    result.firebaseWriteAttempted = true;
-    return db.collection('purchases').doc(dummy.id).set(dummy).then(()=>({ ...result, firebaseSaved:true, dummyId:dummy.id })).catch(err=>({ ...result, firebaseSaved:false, firebaseError:err.message, dummyId:dummy.id }));
-  }
-  result.firebaseWriteAttempted = false; result.firebaseSaved = false; result.dummyId=dummy.id;
-  return Promise.resolve(result);
-};
-</script>
 
-<style>
-.bc-supplement-table-wrap{background:#fff;border:1px solid #e2e8f0;border-radius:16px;overflow:auto;box-shadow:0 4px 14px rgba(15,39,66,.05);}
-.bc-supplement-table{width:100%;border-collapse:collapse;min-width:650px;font-size:.84rem;}
-.bc-supplement-table th{padding:13px 16px;background:#f7f9fc;color:#526273;font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;text-align:left;border-bottom:1px solid #e2e8f0;}
-.bc-supplement-table td{padding:15px 16px;border-bottom:1px solid #edf1f5;color:#26384a;vertical-align:middle;}
-.bc-supplement-table tbody tr:last-child td{border-bottom:0;}
-.bc-supplement-table tbody tr:hover{background:#f8fbfd;}
-.bc-supplement-table .num{text-align:right;white-space:nowrap;}
-.bc-supplement-table tfoot td{background:#f7f9fc;border-top:1px solid #dbe3eb;border-bottom:0;font-size:.86rem;}
-.bc-supp-product{font-weight:850;color:#17324d;}
-.bc-supplement-table .pond-chip{display:inline-flex;align-items:center;padding:.34rem .62rem;border-radius:999px;background:#eef5fb;color:#17466b;font-weight:800;font-size:.74rem;}
-</style>
 
-<style id="bc-supplement-pond-breakdown-css">
-.bc-supp-pond-details summary{cursor:pointer;display:inline-flex;align-items:center;gap:.45rem;color:#17466b;font-weight:800;font-size:.78rem;list-style:none}.bc-supp-pond-details summary::-webkit-details-marker{display:none}.bc-supp-pond-details summary:before{content:'+';display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:6px;background:#eef5fb;font-size:14px}.bc-supp-pond-details[open] summary:before{content:'−'}.bc-supp-pond-details summary span{font-weight:600;color:#7a8a99}.bc-supp-pond-breakdown{margin-top:.65rem;min-width:230px;padding:.7rem;border:1px solid #e5edf4;border-radius:10px;background:#f8fbfd}.bc-supp-pond-line{display:grid;grid-template-columns:minmax(70px,1fr) auto auto;align-items:center;gap:.7rem;padding:.45rem 0;border-bottom:1px solid #e8eef3;font-size:.76rem}.bc-supp-pond-line:last-child{border-bottom:0}.bc-supp-pond-line>span:last-child{color:#536577;white-space:nowrap}.bc-supplement-table td:last-child{min-width:230px}
-</style>
+
+
+
 <script id="bluecrest-physical-settlement-system">
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('physicalSettlementProduct')?.addEventListener('change', updatePhysicalSettlementPreview);
@@ -16719,8 +16893,42 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('physicalInventorySettlementForm')?.addEventListener('submit', savePhysicalInventorySettlement);
 });
 </script>
-</body>
-</html>
+<script id="bluecrest-inventory-searchable-dropdown">
+(function(){
+  function init(){
+    const input=document.getElementById('invSearchInput');
+    const dropdown=document.getElementById('invSearchDropdown');
+    if(!input||!dropdown||input.dataset.searchDropdownBound==='1') return;
+    input.dataset.searchDropdownBound='1';
+    function closeDropdown(){dropdown.hidden=true;input.setAttribute('aria-expanded','false');}
+    function getData(){
+      const productMap=new Map(),vendorMap=new Map();
+      const purchases=Array.isArray(window.purchases)?window.purchases:[];
+      const inventory=typeof getProductInventorySummary==='function'?getProductInventorySummary():[];
+      inventory.forEach(item=>{const name=String(item.name||'').trim();if(!name)return;const key=name.toLowerCase();if(!productMap.has(key))productMap.set(key,{name,company:String(item.company||'').trim(),category:String(item.category||'').trim()});});
+      purchases.forEach(p=>{const name=String(p.name||'').trim();if(name){const key=name.toLowerCase();if(!productMap.has(key))productMap.set(key,{name,company:String(p.company||'').trim(),category:String(p.category||'').trim()});}const vendor=String(p.supplier||'').trim();if(vendor){const key=vendor.toLowerCase();if(!vendorMap.has(key))vendorMap.set(key,vendor);}});
+      (Array.isArray(window.vendors)?window.vendors:[]).forEach(v=>{const name=String(v.name||v.vendorName||v.vendor||'').trim();if(name)vendorMap.set(name.toLowerCase(),name);});
+      return {products:[...productMap.values()].sort((a,b)=>a.name.localeCompare(b.name)),vendors:[...vendorMap.values()].sort((a,b)=>a.localeCompare(b))};
+    }
+    function renderDropdown(){
+      const q=String(input.value||'').trim().toLowerCase(),data=getData();
+      const products=data.products.filter(p=>!q||p.name.toLowerCase().includes(q)||p.company.toLowerCase().includes(q)||p.category.toLowerCase().includes(q));
+      const vendors=data.vendors.filter(v=>!q||v.toLowerCase().includes(q));
+      let html='';
+      if(products.length){html+='<div class="bc-search-group-title">Products</div>';html+=products.slice(0,30).map(p=>'<button type="button" class="bc-search-option" data-search-value="'+escapeHtml(p.name)+'" data-search-kind="product"><span class="bc-search-option-main">📦 '+escapeHtml(p.name)+'</span><span class="bc-search-option-meta">'+escapeHtml(p.company||p.category||'Product')+'</span></button>').join('');}
+      if(vendors.length){html+='<div class="bc-search-group-title">Vendors</div>';html+=vendors.slice(0,30).map(v=>'<button type="button" class="bc-search-option" data-search-value="'+escapeHtml(v)+'" data-search-kind="vendor"><span class="bc-search-option-main">🏪 '+escapeHtml(v)+'</span><span class="bc-search-option-meta">Vendor</span></button>').join('');}
+      dropdown.innerHTML=html||'<div class="bc-search-empty">No matching product or vendor found.</div>';dropdown.hidden=false;input.setAttribute('aria-expanded','true');
+    }
+    input.addEventListener('focus',renderDropdown);
+    input.addEventListener('input',function(){renderDropdown();if(typeof renderInventoryAndPurchases==='function')renderInventoryAndPurchases();});
+    dropdown.addEventListener('mousedown',function(e){const option=e.target.closest('.bc-search-option');if(!option)return;e.preventDefault();input.value=option.dataset.searchValue||'';input.dataset.searchKind=option.dataset.searchKind||'';closeDropdown();if(typeof renderInventoryAndPurchases==='function')renderInventoryAndPurchases();});
+    input.addEventListener('keydown',function(e){if(e.key==='Escape'){closeDropdown();return;}if(e.key==='Enter'){const first=dropdown.querySelector('.bc-search-option');if(!dropdown.hidden&&first){e.preventDefault();first.dispatchEvent(new MouseEvent('mousedown',{bubbles:true,cancelable:true}));}}});
+    document.addEventListener('click',function(e){if(!e.target.closest('.bc-inventory-search-wrap'))closeDropdown();});
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+})();
+</script>
+
 <script id="bluecrest-lock-system">
 (function(){
   const DEVICE = 'laptop';
@@ -16778,7 +16986,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function isCropClosed(cid){ return !!cropLocks[String(cid)]?.closed; }
   function saveLocal(){ localStorage.setItem('bc_pondLocks',JSON.stringify(pondLocks)); localStorage.setItem('bc_cropLocks',JSON.stringify(cropLocks)); }
-  function deny(msg){ alert(msg); return false; }
+  function deny(msg){ bcAlert(msg); return false; }
   window.blueCrestIsPondClosed=isPondClosed;
   window.blueCrestIsCropClosed=isCropClosed;
   window.blueCrestAssertOperationalWrite=function(opts){
@@ -16887,7 +17095,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }catch(e){console.error('Lock history load error:',e);if(body)body.innerHTML='<div style="padding:30px;text-align:center;color:#b91c1c;font-size:13px;">Could not load lock history. Check Firebase/cloud permissions.</div>';}
   }
   function openLockHistory(){
-    if(DEVICE!=='laptop'){alert('Lock & Reactivation History is available on the laptop.');return;}
+    if(DEVICE!=='laptop'){bcAlert('Lock & Reactivation History is available on the laptop.');return;}
     const m=ensureLockHistoryModal();m.style.display='flex'; const c=activeC(); loadLockHistory(true).then(()=>{const y=document.getElementById('bcAuditYearFilter'),cr=document.getElementById('bcAuditCropFilter'); if(y&&c?.year&&[...y.options].some(o=>o.value===String(c.year))) y.value=String(c.year); if(cr&&c?.crop&&[...cr.options].some(o=>o.value===String(c.crop))) cr.value=String(c.crop); renderLockHistory();});
   }
   async function writeAudit(action,r,reason){
@@ -16977,35 +17185,35 @@ document.addEventListener('DOMContentLoaded', () => {
       (closed?`<button type="button" id="bcReactivateCrop" style="border:0;border-radius:7px;padding:5px 8px;background:#b91c1c;color:#fff;font-size:11px;font-weight:800;cursor:pointer">Reactivate Crop</button>`:`<button type="button" id="bcCloseCrop" ${rel.length&&done===rel.length?'':'disabled'} style="border:0;border-radius:7px;padding:5px 8px;background:#2563eb;color:#fff;font-size:11px;font-weight:800;cursor:pointer;opacity:${rel.length&&done===rel.length?'1':'.45'}">Close Crop</button>`)+
       `<button type="button" id="bcManagePondLocks" style="border:0;border-radius:7px;padding:5px 8px;background:#475569;color:#fff;font-size:11px;font-weight:800;cursor:pointer">Pond Locks</button>`;
       document.getElementById('bcCloseCrop')?.addEventListener('click',async()=>{
-        if(!rel.length||!rel.every(p=>isPondClosed(p.id,c.id))){alert('All relevant ponds must be closed before the crop can be closed. A reactivated pond remains open until its next Full/Final Harvest.');return;}
-        try{for(const p of rel)if(!isPondClosed(p.id,c.id))await closePond(p,'Closed after Full/Final Harvest');await closeCrop(c,'Closed after all relevant ponds completed Full/Final Harvest');await writeAudit('CROP_CLOSED',c,'Closed after all relevant ponds completed Full/Final Harvest');renderLockStatus();}catch(e){console.error(e);alert('Crop could not be closed. Check cloud connection.');}
+        if(!rel.length||!rel.every(p=>isPondClosed(p.id,c.id))){bcAlert('All relevant ponds must be closed before the crop can be closed. A reactivated pond remains open until its next Full/Final Harvest.');return;}
+        try{for(const p of rel)if(!isPondClosed(p.id,c.id))await closePond(p,'Closed after Full/Final Harvest');await closeCrop(c,'Closed after all relevant ponds completed Full/Final Harvest');await writeAudit('CROP_CLOSED',c,'Closed after all relevant ponds completed Full/Final Harvest');renderLockStatus();}catch(e){console.error(e);bcAlert('Crop could not be closed. Check cloud connection.');}
       });
       document.getElementById('bcReactivateCrop')?.addEventListener('click',async()=>{
         if(!confirm(`Reactivate ${c.year} • ${c.crop}?`))return;
-        const reason=prompt('Mandatory reason for crop reactivation:','');if(!reason||!reason.trim()){alert('A reason is mandatory.');return;}
-        try{const rec={...cropLocks[String(c.id)],closed:false,reactivatedAt:todayIso(),reactivatedBy:DEVICE,reactivationReason:reason.trim()};cropLocks[String(c.id)]=rec;saveLocal();await cloudSet('cropLocks',String(c.id),rec);await writeAudit('CROP_REACTIVATED',c,reason.trim());renderLockStatus();}catch(e){console.error(e);alert('Crop reactivation failed.');}
+        const reason=prompt('Mandatory reason for crop reactivation:','');if(!reason||!reason.trim()){bcAlert('A reason is mandatory.');return;}
+        try{const rec={...cropLocks[String(c.id)],closed:false,reactivatedAt:todayIso(),reactivatedBy:DEVICE,reactivationReason:reason.trim()};cropLocks[String(c.id)]=rec;saveLocal();await cloudSet('cropLocks',String(c.id),rec);await writeAudit('CROP_REACTIVATED',c,reason.trim());renderLockStatus();}catch(e){console.error(e);bcAlert('Crop reactivation failed.');}
       });
       document.getElementById('bcManagePondLocks')?.addEventListener('click',()=>managePonds(c,rel));
     }
   }
   async function managePonds(c,rel){
-    if(!rel.length){alert('No ponds in this crop.');return;}
+    if(!rel.length){bcAlert('No ponds in this crop.');return;}
     const list=rel.map((p,i)=>`${i+1}. ${p.name||p.id} — ${isPondClosed(p.id,c.id)?'🔒 Closed':'🔓 Open'}`).join('\n');
     const n=Number(prompt(`Pond Locks — ${c.year} • ${c.crop}\n\n${list}\n\nEnter pond number:`,''))-1;
     const p=rel[n]; if(!p)return;
-    if(!isPondClosed(p.id,c.id)){alert(`${p.name||p.id} is automatically closed when its Full/Final Harvest is recorded.`);return;}
+    if(!isPondClosed(p.id,c.id)){bcAlert(`${p.name||p.id} is automatically closed when its Full/Final Harvest is recorded.`);return;}
     await reactivatePondById(p.id);
   }
   function guardForm(id,resolver){ document.addEventListener('submit',e=>{if(e.target?.id!==id)return;const o=resolver()||{};if(!window.blueCrestAssertOperationalWrite(o)){e.preventDefault();e.stopImmediatePropagation();}},true); }
   function wrap(name,fn){const orig=window[name];if(typeof orig!=='function'||orig.__bcLockWrapped)return;const w=fn(orig);w.__bcLockWrapped=true;window[name]=w;}
   async function reactivatePondById(pid, requestedCycleId){
     const c=activeC(),cid=String(requestedCycleId||c.id).trim(),p=getPondForCycle(pid,cid);
-    if(!p){alert('Pond not found in the selected Year/Crop cycle.');return;}
-    if(!isPondClosed(p.id,cid)){alert(`${p.name||p.id} is already open.`);return;}
-    if(DEVICE!=='laptop'){alert('Pond reactivation is available only on the laptop.');return;}
+    if(!p){bcAlert('Pond not found in the selected Year/Crop cycle.');return;}
+    if(!isPondClosed(p.id,cid)){bcAlert(`${p.name||p.id} is already open.`);return;}
+    if(DEVICE!=='laptop'){bcAlert('Pond reactivation is available only on the laptop.');return;}
     if(!confirm(`Reactivate ${p.name||p.id}?`))return;
     const reason=prompt(`Mandatory reason for reactivating ${p.name||p.id}:`,'');
-    if(!reason||!reason.trim()){alert('A reason is mandatory.');return;}
+    if(!reason||!reason.trim()){bcAlert('A reason is mandatory.');return;}
     try{
       const canonicalCid=canonicalCycleId(cid),canonicalPid=canonicalPondId(p.id),key=pkey(canonicalCid,canonicalPid),reactivationTime=todayIso();
       // IMPORTANT: collapse every legacy/case-variant lock for this exact
@@ -17032,7 +17240,7 @@ document.addEventListener('DOMContentLoaded', () => {
       renderLockStatus();
       if(typeof renderPondList==='function')setTimeout(()=>renderPondList(),0);
       if(typeof renderHarvestList==='function')setTimeout(()=>renderHarvestList(),0);
-    }catch(e){console.error('Pond reactivation failed:',e);alert('Pond reactivation failed. Check cloud connection.');}
+    }catch(e){console.error('Pond reactivation failed:',e);bcAlert('Pond reactivation failed. Check cloud connection.');}
   }
   window.blueCrestReactivatePond=reactivatePondById;
   function decoratePondCards(){
@@ -17043,18 +17251,27 @@ document.addEventListener('DOMContentLoaded', () => {
       if(!container)return;
       const cards=[...container.children];
       cards.forEach((card,i)=>{
-        const p=list[i]; if(!p)return;
+        // Resolve the pond by the card's own stable ID instead of array index.
+        // After a deletion the remaining cards can shift position while lock
+        // decoration is still running; index-based matching could then apply
+        // another pond's closed state and hide its Edit/Delete buttons.
+        const cardPondId=String(card.dataset.bcPondId || '').trim();
+        const p=(cardPondId ? list.find(x=>String(x.id)===cardPondId) : null) || list[i];
+        if(!p)return;
         const closed=isPondClosed(p.id,c.id);
         card.dataset.bcPondId=String(p.id);
         const oldBadge=card.querySelector('[data-bc-pond-lock-badge]'); if(oldBadge)oldBadge.remove();
         const oldBtn=card.querySelector('[data-bc-pond-reactivate]'); if(oldBtn)oldBtn.remove();
-        const oldActions=card.querySelector('[data-bc-pond-actions]'); if(oldActions)oldActions.remove();
+        // Keep the original record-actions container intact. Earlier versions
+        // removed that container during decoration, which made Edit/Delete
+        // disappear until the next full page refresh.
         if(DEVICE==='laptop'){
           const actions=card.querySelector('.record-actions');
           if(actions){
-            actions.setAttribute('data-bc-pond-actions','1');
+            const buttons=[...actions.querySelectorAll('button:not([data-bc-pond-reactivate])')];
+            buttons.forEach(b=>{b.style.display='';});
             if(closed){
-              [...actions.querySelectorAll('button')].forEach(b=>{b.style.display='none';});
+              buttons.forEach(b=>{b.style.display='none';});
               const b=document.createElement('button');b.type='button';b.textContent='🔓 Reactivate';b.setAttribute('data-bc-pond-reactivate','1');b.className='small-button';b.style.cssText='font-weight:800;color:#1d4ed8;';b.onclick=()=>reactivatePondById(p.id);actions.appendChild(b);
             }
           }
@@ -17594,3 +17811,81 @@ function initHarvestDecision(){
 }
 document.addEventListener('DOMContentLoaded', initHarvestDecision);
 </script>
+
+
+<script id="bluecrest-accessibility-surgical-fix">
+(function(){
+  const labels = {
+    edit:'Edit', delete:'Delete', close:'Close', print:'Print', search:'Search',
+    menu:'Menu', back:'Back', next:'Next', previous:'Previous', add:'Add',
+    refresh:'Refresh', download:'Download', upload:'Upload', settings:'Settings'
+  };
+  function labelButtons(root=document){
+    root.querySelectorAll('button').forEach(btn=>{
+      if (btn.getAttribute('aria-label')) return;
+      const text = (btn.textContent || '').replace(/\s+/g,' ').trim();
+      if (text) return;
+      const title = btn.getAttribute('title');
+      if (title) { btn.setAttribute('aria-label', title); return; }
+      const action = String(btn.dataset.bcAction || '').toLowerCase();
+      for (const key of Object.keys(labels)) {
+        if (action.includes(key)) { btn.setAttribute('aria-label', labels[key]); return; }
+      }
+      const onclick = String(btn.getAttribute('onclick') || '').toLowerCase();
+      for (const key of Object.keys(labels)) {
+        if (onclick.includes(key)) { btn.setAttribute('aria-label', labels[key]); return; }
+      }
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded',()=>labelButtons());
+  else labelButtons();
+  new MutationObserver(muts=>muts.forEach(m=>m.addedNodes.forEach(n=>{ if(n.nodeType===1) labelButtons(n); }))).observe(document.body,{childList:true,subtree:true});
+})();
+</script>
+
+<script id="bluecrest-toast-validation-surgical-fix">
+(function(){
+  let host;
+  function ensureHost(){
+    if(host && document.body.contains(host)) return host;
+    host=document.createElement('div');
+    host.id='bluecrestToastHost';
+    host.setAttribute('aria-live','polite');
+    host.setAttribute('aria-atomic','true');
+    host.style.cssText='position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:100000;display:flex;flex-direction:column;gap:8px;max-width:min(92vw,520px);pointer-events:none';
+    document.body.appendChild(host);
+    return host;
+  }
+  window.bcNotify=function(message){
+    const item=document.createElement('div');
+    item.textContent=String(message ?? '');
+    item.style.cssText='padding:11px 16px;border:1px solid #dbe5ef;border-radius:12px;background:#fff;color:#1e293b;box-shadow:0 10px 28px rgba(15,23,42,.16);font:600 14px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif';
+    ensureHost().appendChild(item);
+    setTimeout(()=>item.remove(),4200);
+  };
+  window.bcAlert=window.bcNotify;
+})();
+</script>
+
+<script id="bluecrest-safe-action-delegation">
+// Safe action dispatch: IDs stay in data attributes instead of executable JS strings.
+document.addEventListener('click', function(e) {
+  const el = e.target.closest('[data-bc-action]');
+  if (!el) return;
+  const action = el.getAttribute('data-bc-action');
+  const id = el.getAttribute('data-id');
+  if (action === 'setActiveCycle') {
+    setActiveCycle(Number(el.getAttribute('data-year')), el.getAttribute('data-crop') || '');
+    document.getElementById('cycleManagerModal')?.classList.remove('active');
+    return;
+  }
+  if (action === 'reactivatePond') {
+    if (typeof window.blueCrestReactivatePond === 'function') window.blueCrestReactivatePond(el.getAttribute('data-pond-id') || '', el.getAttribute('data-cycle-id') || '');
+    return;
+  }
+  const fn = window[action];
+  if (typeof fn === 'function') fn(id);
+});
+</script>
+</body>
+</html>
