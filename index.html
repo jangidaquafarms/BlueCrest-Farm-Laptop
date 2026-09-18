@@ -4595,6 +4595,7 @@ body.bc-return-modal-open{overflow:hidden!important}
             <span class="status-dot"></span>
             <span id="firebaseStatusLabel">Cloud: checking</span>
           </button>
+          <button type="button" class="pill-btn action-blue" id="uploadAllToFirebaseBtn" title="Upload the farm currently in this Chrome to Firebase">Save all to Firebase</button>
           <button type="button" class="pill-btn status-green" id="activeCycleBadge">
             <span class="status-dot"></span> Active Cycle
           </button>
@@ -6140,6 +6141,10 @@ function firebaseCollectionLabel(name) {
         lockAudit: 'Lock history',
         feedCropClosingAdjustments: 'Feed closing stock',
         feedCropClosingAdjustmentHistory: 'Feed closing history',
+        crop1ClosingPackedStock: 'Crop 1 closing stock',
+        crop2ClosingPackedStock: 'Crop 2 closing stock',
+        physicalInventorySettlements: 'Physical inventory',
+        laptopLocalCache: 'Farm cache',
         appStatus: 'Cloud connection'
     };
     return map[name] || name;
@@ -6863,7 +6868,6 @@ function saveProductMemoryEntry(name, company, price, category, unit) {
     category: category || productMemory[k]?.category || 'Fertilizer',
     unit: unit || productMemory[k]?.unit || 'Bag/Pkt'
   };
-  localStorage.setItem(STORAGE_KEYS.PRODUCT_MEMORY, JSON.stringify(productMemory));
 }
 
 function cycleIdFor(year, crop) {
@@ -6925,9 +6929,17 @@ function getCrop1ClosingCycle() {
     return { id: `${year}|crop 1`, year, crop: 'Crop 1' };
 }
 function getCrop1ClosingPackedStockEntries() { try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.CROP1_CLOSING_PACKED_STOCK) || '[]'); } catch(e) { return []; } }
-function saveCrop1ClosingPackedStockEntries(entries) { localStorage.setItem(STORAGE_KEYS.CROP1_CLOSING_PACKED_STOCK, JSON.stringify(entries)); }
+function saveCrop1ClosingPackedStockEntries(entries) {
+  const list = Array.isArray(entries) ? entries : [];
+  return firebaseFirstBatchWrite('crop1ClosingPackedStock', list, { label: 'Crop 1 closing stock' })
+    .then(() => localStorage.setItem(STORAGE_KEYS.CROP1_CLOSING_PACKED_STOCK, JSON.stringify(list)));
+}
 function getCrop2ClosingPackedStockEntries() { try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.CROP2_CLOSING_PACKED_STOCK) || '[]'); } catch(e) { return []; } }
-function saveCrop2ClosingPackedStockEntries(entries) { localStorage.setItem(STORAGE_KEYS.CROP2_CLOSING_PACKED_STOCK, JSON.stringify(entries)); }
+function saveCrop2ClosingPackedStockEntries(entries) {
+  const list = Array.isArray(entries) ? entries : [];
+  return firebaseFirstBatchWrite('crop2ClosingPackedStock', list, { label: 'Crop 2 closing stock' })
+    .then(() => localStorage.setItem(STORAGE_KEYS.CROP2_CLOSING_PACKED_STOCK, JSON.stringify(list)));
+}
 function getCrop2ClosingCycle() {
     const active = typeof getActiveCycle === 'function' ? getActiveCycle() : activeCycle;
     const year = Number(active?.year) || new Date().getFullYear();
@@ -6970,8 +6982,8 @@ function handleCrop2ClosingProductKeydown(e){ const input=e.currentTarget,dd=doc
 function updateCrop2ClosingProductPreview(){ const name=document.getElementById('crop2ClosingProduct')?.value||'',qty=Number(document.getElementById('crop2ClosingQty')?.value||0),pe=document.getElementById('crop2ClosingPrice'),ve=document.getElementById('crop2ClosingValue'),ie=document.getElementById('crop2ClosingProductInfo'); if(!name){if(pe)pe.value='';if(ve)ve.value='';if(ie)ie.textContent='Select a product to fetch its Crop 2 cost price.';return;} const x=getCrop2ClosingProductPrice(name);if(pe)pe.value=`₹${x.price.toLocaleString('en-IN',{maximumFractionDigits:2})} / ${x.unit}`;if(ve)ve.value=`₹${(qty*x.price).toLocaleString('en-IN',{maximumFractionDigits:2})}`;if(ie)ie.innerHTML=`${escapeHtml(x.source)}: <strong>₹${x.price.toLocaleString('en-IN',{maximumFractionDigits:2})}/${escapeHtml(x.unit)}</strong>${x.vendor?' • '+escapeHtml(x.vendor):''}`; }
 function openCrop2ClosingPackedStockModal(){ const m=document.getElementById('crop2ClosingPackedStockModal');if(!m)return;crop2ClosingEditingId=null;populateCrop2ClosingProductSelect();document.getElementById('crop2ClosingPackedStockForm')?.reset();const s=document.getElementById('crop2ClosingProduct');if(s)s.value='';const input=document.getElementById('crop2ClosingProductSearch'),dd=document.getElementById('crop2ClosingProductDropdown');if(input)input.value='';if(dd)dd.hidden=true;updateCrop2ClosingProductPreview();renderCrop2ClosingPackedStockSavedList();const submit=m.querySelector('button[type="submit"]');if(submit)submit.textContent='Save Closing Stock';m.showModal(); }
 function editCrop2ClosingPackedStock(id){ const entry=getCrop2ClosingPackedStockEntries().find(e=>String(e.id)===String(id));if(!entry){bcAlert('Closing inventory entry not found.');return;}crop2ClosingEditingId=String(entry.id);const m=document.getElementById('crop2ClosingPackedStockModal');if(!m)return;populateCrop2ClosingProductSelect();selectCrop2ClosingProduct(String(entry.name||''));const qtyEl=document.getElementById('crop2ClosingQty');if(qtyEl)qtyEl.value=Number(entry.qty)||0;updateCrop2ClosingProductPreview();renderCrop2ClosingPackedStockSavedList();const submit=m.querySelector('button[type="submit"]');if(submit)submit.textContent='Update Closing Stock';m.showModal(); }
-function deleteCrop2ClosingPackedStock(id){ if(!confirm('Delete this Crop 2 closing stock entry?'))return;saveCrop2ClosingPackedStockEntries(getCrop2ClosingPackedStockEntries().filter(e=>String(e.id)!==String(id)));crop2ClosingEditingId=null;renderCropClosingStockPanel();renderCrop2ClosingPackedStockSavedList();if(document.getElementById('cropClosingStockViewModal')?.open)openCropClosingStockViewModal(); }
-function saveCrop2ClosingPackedStock(event){ event.preventDefault();const name=document.getElementById('crop2ClosingProduct')?.value||'',qty=Number(document.getElementById('crop2ClosingQty')?.value||0);if(!name||!(qty>0)){bcAlert('Select a product and enter a closing quantity.');return;}const cycle=getCrop2ClosingCycle(),x=getCrop2ClosingProductPrice(name);if(!(x.price>0)){bcAlert('No cost price is available for this product. Record a Crop 2 purchase or ensure it came from Crop 1 opening stock first.');return;}const fifo=getFifoPhysicalClosingValuation(name,x.category||'Fertilizer',cycle.year,'Crop 2',qty,new Date().toISOString().slice(0,10),crop2ClosingEditingId);if(!fifo.ok){bcAlert(`${fifo.reason}${fifo.excessQty>0 ? ` Excess: ${fifo.excessQty.toLocaleString('en-IN',{maximumFractionDigits:3})} base units.` : ''}`);return;}if(!(fifo.closingValue>=0)||(qty>0&&!(fifo.closingRate>0))){bcAlert('FIFO closing valuation could not be calculated. Check purchases, returns and usage history.');return;}const entries=getCrop2ClosingPackedStockEntries();let idx=crop2ClosingEditingId?entries.findIndex(e=>String(e.id)===String(crop2ClosingEditingId)):-1;const key=name.trim().toLowerCase();const duplicateIdx=entries.findIndex(e=>e.cycleId===cycle.id&&String(e.name).trim().toLowerCase()===key&&(!crop2ClosingEditingId||String(e.id)!==String(crop2ClosingEditingId)));if(duplicateIdx>=0){bcAlert('A Crop 2 closing inventory entry for this product already exists. Edit that entry instead.');return;}const rec={id:idx>=0?entries[idx].id:`c2close-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,cycleId:cycle.id,year:cycle.year,crop:'Crop 2',name:name.trim(),company:x.vendor,category:x.category||'Fertilizer',unit:x.unit,qty,price:Number(fifo.closingRate||0),value:Number(fifo.closingValue||0),fifoClosingValue:Number(fifo.closingValue||0),fifoClosingRate:Number(fifo.closingRate||0),fifoTheoreticalQty:Number(fifo.theoreticalQty||0),fifoShortageQty:Number(fifo.shortageQty||0),fifoShortageValue:Number(fifo.adjustmentValue||0),fifoValuation:'FIFO physical closing',date:new Date().toISOString()};if(idx>=0)entries[idx]=rec;else entries.push(rec);saveCrop2ClosingPackedStockEntries(entries);const wasEditing=idx>=0;crop2ClosingEditingId=null;renderCropClosingStockPanel();renderCrop2ClosingPackedStockSavedList();document.getElementById('crop2ClosingQty').value='';updateCrop2ClosingProductPreview();const submit=document.getElementById('crop2ClosingPackedStockModal')?.querySelector('button[type="submit"]');if(submit)submit.textContent='Save Closing Stock';bcAlert(wasEditing?'Crop 2 closing stock updated.':'Crop 2 closing stock saved.'); }
+function deleteCrop2ClosingPackedStock(id){ if(!confirm('Delete this Crop 2 closing stock entry?'))return; const next=getCrop2ClosingPackedStockEntries().filter(e=>String(e.id)!==String(id)); firebaseFirstDelete('crop2ClosingPackedStock', String(id), {label:'Crop 2 closing stock'}).then(()=>{ localStorage.setItem(STORAGE_KEYS.CROP2_CLOSING_PACKED_STOCK, JSON.stringify(next)); crop2ClosingEditingId=null; renderCropClosingStockPanel(); renderCrop2ClosingPackedStockSavedList(); if(document.getElementById('cropClosingStockViewModal')?.open)openCropClosingStockViewModal(); }).catch(err=>console.error(err)); }
+function saveCrop2ClosingPackedStock(event){ event.preventDefault();const name=document.getElementById('crop2ClosingProduct')?.value||'',qty=Number(document.getElementById('crop2ClosingQty')?.value||0);if(!name||!(qty>0)){bcAlert('Select a product and enter a closing quantity.');return;}const cycle=getCrop2ClosingCycle(),x=getCrop2ClosingProductPrice(name);if(!(x.price>0)){bcAlert('No cost price is available for this product. Record a Crop 2 purchase or ensure it came from Crop 1 opening stock first.');return;}const fifo=getFifoPhysicalClosingValuation(name,x.category||'Fertilizer',cycle.year,'Crop 2',qty,new Date().toISOString().slice(0,10),crop2ClosingEditingId);if(!fifo.ok){bcAlert(`${fifo.reason}${fifo.excessQty>0 ? ` Excess: ${fifo.excessQty.toLocaleString('en-IN',{maximumFractionDigits:3})} base units.` : ''}`);return;}if(!(fifo.closingValue>=0)||(qty>0&&!(fifo.closingRate>0))){bcAlert('FIFO closing valuation could not be calculated. Check purchases, returns and usage history.');return;}const entries=getCrop2ClosingPackedStockEntries();let idx=crop2ClosingEditingId?entries.findIndex(e=>String(e.id)===String(crop2ClosingEditingId)):-1;const key=name.trim().toLowerCase();const duplicateIdx=entries.findIndex(e=>e.cycleId===cycle.id&&String(e.name).trim().toLowerCase()===key&&(!crop2ClosingEditingId||String(e.id)!==String(crop2ClosingEditingId)));if(duplicateIdx>=0){bcAlert('A Crop 2 closing inventory entry for this product already exists. Edit that entry instead.');return;}const rec={id:idx>=0?entries[idx].id:`c2close-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,cycleId:cycle.id,year:cycle.year,crop:'Crop 2',name:name.trim(),company:x.vendor,category:x.category||'Fertilizer',unit:x.unit,qty,price:Number(fifo.closingRate||0),value:Number(fifo.closingValue||0),fifoClosingValue:Number(fifo.closingValue||0),fifoClosingRate:Number(fifo.closingRate||0),fifoTheoreticalQty:Number(fifo.theoreticalQty||0),fifoShortageQty:Number(fifo.shortageQty||0),fifoShortageValue:Number(fifo.adjustmentValue||0),fifoValuation:'FIFO physical closing',date:new Date().toISOString()};if(idx>=0)entries[idx]=rec;else entries.push(rec);saveCrop2ClosingPackedStockEntries(entries).then(()=>{const wasEditing=idx>=0;crop2ClosingEditingId=null;renderCropClosingStockPanel();renderCrop2ClosingPackedStockSavedList();document.getElementById('crop2ClosingQty').value='';updateCrop2ClosingProductPreview();const submit=document.getElementById('crop2ClosingPackedStockModal')?.querySelector('button[type="submit"]');if(submit)submit.textContent='Save Closing Stock';bcAlert(wasEditing?'Crop 2 closing stock updated.':'Crop 2 closing stock saved.');}).catch(err=>console.error(err)); }
 function openActiveCropClosingPackedStockModal(){ const crop=String((typeof getActiveCycle==='function'?getActiveCycle():activeCycle)?.crop||'').trim().toLowerCase(); if(crop==='crop 2') openCrop2ClosingPackedStockModal(); else openCrop1ClosingPackedStockModal(); }
 document.addEventListener('DOMContentLoaded',()=>{ const input=document.getElementById('crop2ClosingProductSearch'),picker=document.getElementById('crop2ClosingProductPicker'),dd=document.getElementById('crop2ClosingProductDropdown');input?.addEventListener('focus',()=>{if(dd){dd.hidden=false;filterCrop2ClosingProductDropdown();}});input?.addEventListener('input',()=>{crop2ClosingKeyboardIndex=-1;filterCrop2ClosingProductDropdown();});input?.addEventListener('keydown',handleCrop2ClosingProductKeydown);picker?.querySelector('.closing-product-search-wrap')?.addEventListener('click',()=>{input?.focus();if(dd)dd.hidden=false;filterCrop2ClosingProductDropdown();});document.addEventListener('click',e=>{if(picker&&!picker.contains(e.target)&&dd){dd.hidden=true;crop2ClosingKeyboardIndex=-1;}});document.getElementById('crop2ClosingProduct')?.addEventListener('change',updateCrop2ClosingProductPreview);document.getElementById('crop2ClosingQty')?.addEventListener('input',updateCrop2ClosingProductPreview);document.getElementById('crop2ClosingPackedStockForm')?.addEventListener('submit',saveCrop2ClosingPackedStock);});
 
@@ -7202,7 +7214,7 @@ function editCrop1ClosingPackedStock(id){
     if(submit)submit.textContent='Update Closing Stock';
     m.showModal();
 }
-function deleteCrop1ClosingPackedStock(id){ if(!confirm('Delete this Crop 1 closing stock entry?'))return; saveCrop1ClosingPackedStockEntries(getCrop1ClosingPackedStockEntries().filter(e=>String(e.id)!==String(id))); crop1ClosingEditingId=null; renderCropClosingStockPanel(); renderCrop1ClosingPackedStockSavedList(); if(document.getElementById('cropClosingStockViewModal')?.open) openCropClosingStockViewModal(); }
+function deleteCrop1ClosingPackedStock(id){ if(!confirm('Delete this Crop 1 closing stock entry?'))return; const next=getCrop1ClosingPackedStockEntries().filter(e=>String(e.id)!==String(id)); firebaseFirstDelete('crop1ClosingPackedStock', String(id), {label:'Crop 1 closing stock'}).then(()=>{ localStorage.setItem(STORAGE_KEYS.CROP1_CLOSING_PACKED_STOCK, JSON.stringify(next)); crop1ClosingEditingId=null; renderCropClosingStockPanel(); renderCrop1ClosingPackedStockSavedList(); if(document.getElementById('cropClosingStockViewModal')?.open) openCropClosingStockViewModal(); }).catch(err=>console.error(err)); }
 function saveCrop1ClosingPackedStock(event){
     event.preventDefault(); const name=document.getElementById('crop1ClosingProduct')?.value||'', qty=Number(document.getElementById('crop1ClosingQty')?.value||0); if(!name||!(qty>0)){bcAlert('Select a product and enter a closing quantity.');return;}
     const cycle=getCrop1ClosingCycle(), x=getCrop1ClosingProductPrice(name); if(!(x.price>0)){bcAlert('No purchase price is available for this product. Please record a purchase first.');return;}
@@ -7216,13 +7228,14 @@ function saveCrop1ClosingPackedStock(event){
     if(duplicateIdx>=0){bcAlert('A closing inventory entry for this product already exists. Edit that entry instead.');return;}
     const rec={id:idx>=0?entries[idx].id:`c1close-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,cycleId:cycle.id,year:cycle.year,crop:'Crop 1',name:name.trim(),company:x.vendor,category:x.category||'Fertilizer',unit:x.unit,qty,price:Number(fifo.closingRate||0),value:Number(fifo.closingValue||0),fifoClosingValue:Number(fifo.closingValue||0),fifoClosingRate:Number(fifo.closingRate||0),fifoTheoreticalQty:Number(fifo.theoreticalQty||0),fifoShortageQty:Number(fifo.shortageQty||0),fifoShortageValue:Number(fifo.adjustmentValue||0),fifoValuation:'FIFO physical closing',date:new Date().toISOString()};
     if(idx>=0)entries[idx]=rec;else entries.push(rec);
-    saveCrop1ClosingPackedStockEntries(entries);
-    const wasEditing=idx>=0;
-    crop1ClosingEditingId=null;
-    renderCropClosingStockPanel(); renderCrop1ClosingPackedStockSavedList();
-    document.getElementById('crop1ClosingQty').value=''; updateCrop1ClosingProductPreview();
-    const submit=document.getElementById('crop1ClosingPackedStockModal')?.querySelector('button[type="submit"]'); if(submit)submit.textContent='Save Closing Stock';
-    bcAlert(wasEditing?'Closing stock updated.':'Closing stock saved.');
+    saveCrop1ClosingPackedStockEntries(entries).then(() => {
+      const wasEditing=idx>=0;
+      crop1ClosingEditingId=null;
+      renderCropClosingStockPanel(); renderCrop1ClosingPackedStockSavedList();
+      document.getElementById('crop1ClosingQty').value=''; updateCrop1ClosingProductPreview();
+      const submit=document.getElementById('crop1ClosingPackedStockModal')?.querySelector('button[type="submit"]'); if(submit)submit.textContent='Save Closing Stock';
+      bcAlert(wasEditing?'Closing stock updated.':'Closing stock saved.');
+    }).catch(err => console.error('Crop 1 closing stock Firebase save failed:', err));
 }
 
 document.addEventListener('DOMContentLoaded',()=>{ const input=document.getElementById('crop1ClosingProductSearch'), picker=document.getElementById('crop1ClosingProductPicker'), dd=document.getElementById('crop1ClosingProductDropdown'); input?.addEventListener('focus',()=>{if(dd){dd.hidden=false;filterCrop1ClosingProductDropdown();}}); input?.addEventListener('input',()=>{crop1ClosingKeyboardIndex=-1;filterCrop1ClosingProductDropdown();}); input?.addEventListener('keydown',handleCrop1ClosingProductKeydown); picker?.querySelector('.closing-product-search-wrap')?.addEventListener('click',()=>{input?.focus();if(dd)dd.hidden=false;filterCrop1ClosingProductDropdown();}); document.addEventListener('click',e=>{if(picker&&!picker.contains(e.target)&&dd){dd.hidden=true;crop1ClosingKeyboardIndex=-1;}}); document.getElementById('crop1ClosingProduct')?.addEventListener('change',updateCrop1ClosingProductPreview);document.getElementById('crop1ClosingQty')?.addEventListener('input',updateCrop1ClosingProductPreview);document.getElementById('crop1ClosingPackedStockForm')?.addEventListener('submit',saveCrop1ClosingPackedStock);});
@@ -7752,21 +7765,28 @@ async function firebaseFirstBatchWrite(collectionName, records, options = {}) {
   const label = options.label || firebaseCollectionLabel(collectionName);
   const silent = options.silent === true;
   try {
-    requireFirebaseConnection();
-    const list = Array.isArray(records) ? records : [records];
-    const batch = db.batch();
-    list.forEach(record => {
-      const id = record && record.id != null ? record.id : null;
-      if (id == null || String(id).trim() === '') throw new Error('A record is missing its ID and cannot be saved.');
-      batch.set(db.collection(collectionName).doc(String(id)), record, { merge: true });
-    });
-    await batch.commit();
+    await commitFirestoreRecords(collectionName, records);
     setFirebaseStatus('connected');
     if (!silent) notifyFirebaseSave(true, label);
   } catch (err) {
     setFirebaseStatus('disconnected');
     if (!silent) notifyFirebaseSave(false, label, err);
     throw err;
+  }
+}
+
+async function commitFirestoreRecords(collectionName, records) {
+  requireFirebaseConnection();
+  const list = (Array.isArray(records) ? records : [records]).filter(record => record && (record.firestoreId != null || record.id != null));
+  for (let i = 0; i < list.length; i += 400) {
+    const chunk = list.slice(i, i + 400);
+    const batch = db.batch();
+    chunk.forEach(record => {
+      const docId = String(record.firestoreId || record.id).trim();
+      if (!docId) throw new Error('A record is missing its ID and cannot be saved.');
+      batch.set(db.collection(collectionName).doc(docId), record, { merge: true });
+    });
+    await batch.commit();
   }
 }
 
@@ -7784,10 +7804,54 @@ async function firebaseFirstDelete(collectionName, firestoreId, options = {}) {
   }
 }
 
-function saveStorage() {
-  // Cache laptop-only collections after the caller has already written the
-  // primary record to Firebase. Cloud first, then this computer.
-  const localCache = [
+function ensureRecordIds(records, prefix) {
+  return (Array.isArray(records) ? records : []).map((record, index) => {
+    if (record && (record.id != null || record.firestoreId != null) && String(record.firestoreId || record.id).trim()) return record;
+    return { ...(record || {}), id: `${prefix}_${Date.now()}_${index}` };
+  });
+}
+
+async function uploadAllLocalFarmToFirebase() {
+  if (!confirm('Upload the farm currently saved in this Chrome to Firebase?\n\nDo this on the laptop Chrome that has the real farm. Firebase is updated first, then this computer.')) return;
+  const btn = document.getElementById('uploadAllToFirebaseBtn');
+  if (btn) btn.disabled = true;
+  try {
+    requireFirebaseConnection();
+    const pondRecords = (Array.isArray(ponds) ? ponds : []).map(p => {
+      const firestoreId = String(p.firestoreId || canonicalPondFirestoreId(p.cycleId || cycleIdFor(p.year, p.crop), p.id || p.name));
+      return { ...p, firestoreId };
+    });
+    await commitFirestoreRecords('ponds', pondRecords);
+    await commitFirestoreRecords('feeds', ensureRecordIds(feedEntries, 'feed'));
+    await commitFirestoreRecords('sampling', ensureRecordIds(samples, 'sample'));
+    await commitFirestoreRecords('harvests', ensureRecordIds(harvests, 'harvest'));
+    await commitFirestoreRecords('treatments', ensureRecordIds(treatments, 'treatment'));
+    await commitFirestoreRecords('purchases', ensureRecordIds(purchases, 'purchase'));
+    await commitFirestoreRecords('stockTransfers', ensureRecordIds(stockTransfers, 'st'));
+    await commitFirestoreRecords('stockReturns', ensureRecordIds(stockReturns, 'sret'));
+    await commitFirestoreRecords('vendorTransactions', ensureRecordIds(vendorTransactions, 'vtxn'));
+    await commitFirestoreRecords('ledgerEntries', ensureRecordIds(ledgerEntries, 'ledger'));
+    await commitFirestoreRecords('farmCycles', ensureRecordIds(farmCycles, 'cycle'));
+    await commitFirestoreRecords('crop1ClosingPackedStock', ensureRecordIds(getCrop1ClosingPackedStockEntries(), 'c1close'));
+    await commitFirestoreRecords('crop2ClosingPackedStock', ensureRecordIds(getCrop2ClosingPackedStockEntries(), 'c2close'));
+    await commitFirestoreRecords('physicalInventorySettlements', ensureRecordIds(getPhysicalInventorySettlements(), 'pis'));
+    if (Array.isArray(feedCropClosingAdjustments) && feedCropClosingAdjustments.length) {
+      await commitFirestoreRecords('feedCropClosingAdjustments', ensureRecordIds(feedCropClosingAdjustments, 'fcc'));
+    }
+    await persistLaptopCacheToFirebaseThenLocal();
+    setFirebaseStatus('connected');
+    notifyFirebaseSave(true, 'All farm data');
+  } catch (err) {
+    console.error('Upload all farm data to Firebase failed:', err);
+    setFirebaseStatus('disconnected');
+    notifyFirebaseSave(false, 'All farm data', err);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+function getLaptopCachePairs() {
+  return [
     [STORAGE_KEYS.STOCK_RETURNS, stockReturns],
     [STORAGE_KEYS.VENDOR_TXNS, vendorTransactions],
     [STORAGE_KEYS.VENDORS, vendors],
@@ -7798,28 +7862,33 @@ function saveStorage() {
     [STORAGE_KEYS.FEED_PHYSICAL_STOCK, feedPhysicalStock],
     [STORAGE_KEYS.FEED_MIN_STOCK, feedMinStockKg],
     [STORAGE_KEYS.FEED_ADJUSTMENTS, feedStockAdjustments],
+    [STORAGE_KEYS.PRODUCT_MEMORY, productMemory],
+    [STORAGE_KEYS.CROP1_CLOSING_PACKED_STOCK, getCrop1ClosingPackedStockEntries()],
+    [STORAGE_KEYS.CROP2_CLOSING_PACKED_STOCK, getCrop2ClosingPackedStockEntries()],
+    [STORAGE_KEYS.PHYSICAL_INVENTORY_SETTLEMENTS, getPhysicalInventorySettlements()],
+    [STORAGE_KEYS.FARM_CYCLES, farmCycles],
+    [STORAGE_KEYS.ACTIVE_CYCLE, activeCycle],
     ['bluecrest_feed_crop_closing_adjustments', feedCropClosingAdjustments],
     ['bluecrest_feed_crop_closing_adjustment_history', feedCropClosingAdjustmentHistory]
   ];
+}
+
+async function persistLaptopCacheToFirebaseThenLocal() {
+  const localCache = getLaptopCachePairs();
   const payload = {};
   localCache.forEach(([key, value]) => { payload[key] = value; });
-  const writeLocal = () => {
-    try {
-      localCache.forEach(([key, value]) => localStorage.setItem(key, JSON.stringify(value)));
-    } catch (e) {
-      console.warn('Local cache save skipped:', e);
-    }
-  };
-  if (typeof db === 'undefined' || !db) {
-    writeLocal();
-    return;
-  }
-  db.collection('laptopLocalCache').doc('state').set({
+  requireFirebaseConnection();
+  await db.collection('laptopLocalCache').doc('state').set({
     payload,
     updatedAt: new Date().toISOString()
-  }, { merge: true }).then(writeLocal).catch(err => {
-    console.warn('Farm cache Firebase save failed; writing local copy only:', err);
-    writeLocal();
+  }, { merge: true });
+  localCache.forEach(([key, value]) => localStorage.setItem(key, JSON.stringify(value)));
+}
+
+function saveStorage() {
+  persistLaptopCacheToFirebaseThenLocal().catch(err => {
+    console.error('Farm cache Firebase save failed; local copy was not changed:', err);
+    notifyFirebaseSave(false, 'Farm cache', err);
   });
 }
 
@@ -8835,7 +8904,9 @@ function getPhysicalInventorySettlements() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.PHYSICAL_INVENTORY_SETTLEMENTS) || '[]'); } catch(e) { return []; }
 }
 function savePhysicalInventorySettlements(rows) {
-  localStorage.setItem(STORAGE_KEYS.PHYSICAL_INVENTORY_SETTLEMENTS, JSON.stringify(Array.isArray(rows) ? rows : []));
+  const list = Array.isArray(rows) ? rows : [];
+  return firebaseFirstBatchWrite('physicalInventorySettlements', list, { label: 'Physical inventory' })
+    .then(() => localStorage.setItem(STORAGE_KEYS.PHYSICAL_INVENTORY_SETTLEMENTS, JSON.stringify(list)));
 }
 function getActivePhysicalInventorySettlements() {
   const cycleId = activeCycle?.id;
@@ -8984,11 +9055,13 @@ function savePhysicalInventorySettlement(event) {
     systemQty:system, physicalQty:physical, differenceQty:difference, rate, adjustmentValue,
     pondAllocations, usageBasis:usageTotal > 0 ? 'Product usage by pond' : 'No pond usage found', date:new Date().toISOString()
   };
-  all.push(rec); savePhysicalInventorySettlements(all);
+  all.push(rec);
+  savePhysicalInventorySettlements(all).then(() => {
   renderPhysicalSettlementSavedList(); updatePhysicalSettlementPreview();
   document.getElementById('physicalInventorySettlementModal').dataset.editingId='';
   bcAlert(difference < -0.000001 ? `Physical shortage saved: ${Math.abs(difference).toFixed(3)} ${item.unit || ''}. ₹${Math.round(adjustmentValue).toLocaleString('en-IN')} recognized as physical inventory loss.` : difference > 0.000001 ? `Physical excess saved: ${difference.toFixed(3)} ${item.unit || ''}.` : 'Physical stock matched system stock.');
   renderInventoryAndPurchases(); renderFinanceOverview(); renderPondwisePnl();
+  }).catch(err => console.error('Physical inventory Firebase save failed:', err));
 }
 function getActivePhysicalSettlementAdjustmentForPond(pondId, productName) {
   const key = String(productName||'').trim().toLowerCase();
@@ -10361,6 +10434,7 @@ function renderStockReturnHistory() {
 }
 
 function setupEventListeners() {
+  document.getElementById('uploadAllToFirebaseBtn')?.addEventListener('click', uploadAllLocalFarmToFirebase);
   document.getElementById('stockTransferForm')?.addEventListener('submit', saveStockTransfer);
   document.getElementById('stockTransferCancelBtn')?.addEventListener('click', closeStockTransferModal);
   document.getElementById('closeStockTransferBtn')?.addEventListener('click', closeStockTransferModal);
