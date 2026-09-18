@@ -6533,6 +6533,7 @@ let stockTransfers = [];
 let activeCycle = { year: 2026, crop: 'Crop 1', id: '2026|crop 1' };
 let deleteTargetId = null;
 let deleteTargetType = null;
+const suppressedPurchaseIds = new Set();
 let vendorPaymentOnlyMode = false;
 let editingVendorTxnId = null;
 
@@ -7434,12 +7435,38 @@ function normalisePurchaseRecord(p, index) {
   };
 }
 
+function purchaseIdentityKeys(p) {
+  return [p?.id, p?.firestoreId, p?.legacyRecordId]
+    .map(v => String(v ?? '').trim())
+    .filter(v => v && v !== 'undefined' && v !== 'null');
+}
+
+function isPurchaseSuppressed(p) {
+  return purchaseIdentityKeys(p).some(k => suppressedPurchaseIds.has(k));
+}
+
+function suppressPurchaseRecord(p, extraId) {
+  purchaseIdentityKeys(p).concat(extraId ? [String(extraId)] : []).forEach(k => {
+    const key = String(k || '').trim();
+    if (key && key !== 'undefined' && key !== 'null') suppressedPurchaseIds.add(key);
+  });
+}
+
+function removeLocalPurchase(id) {
+  const wanted = String(id ?? '').trim();
+  const list = Array.isArray(purchases) ? purchases : [];
+  const found = list.find(p => purchaseIdentityKeys(p).includes(wanted)) || null;
+  suppressPurchaseRecord(found || {}, wanted);
+  purchases = list.filter(p => !isPurchaseSuppressed(p) && !purchaseIdentityKeys(p).includes(wanted));
+  return found;
+}
+
 function mergePurchasesPreservingLocal(localList, cloudList) {
-  const local = (Array.isArray(localList) ? localList : []).map((p, i) => normalisePurchaseRecord(p, i));
+  const local = (Array.isArray(localList) ? localList : []).map((p, i) => normalisePurchaseRecord(p, i)).filter(p => !isPurchaseSuppressed(p));
   const cloud = (Array.isArray(cloudList) ? cloudList : []).map((p, i) => normalisePurchaseRecord({
     ...p,
     id: p?.id || p?.firestoreId
-  }, i + 100000));
+  }, i + 100000)).filter(p => !isPurchaseSuppressed(p));
   if (!cloud.length) return local;
   const byId = new Map();
   local.forEach(p => { if (p?.id) byId.set(String(p.id), p); });
@@ -7695,7 +7722,10 @@ function loadAndEnsureData() {
                 return { ...data, id: data.id || doc.id, firestoreId: doc.id };
               });
               purchases = mergePurchasesPreservingLocal(localBefore, cloudPurchases);
-              if (!purchases.length && localBefore.length) purchases = localBefore.map((p, i) => normalisePurchaseRecord(p, i));
+              if (!purchases.length && localBefore.length) {
+                const recovered = localBefore.filter(p => !isPurchaseSuppressed(p));
+                if (recovered.length) purchases = recovered.map((p, i) => normalisePurchaseRecord(p, i));
+              }
               try { localStorage.setItem(STORAGE_KEYS.PURCHASES, JSON.stringify(purchases)); } catch (e) { console.warn('Purchase local cache update failed:', e); }
               if (typeof renderAll === 'function') renderAll();
           }, err => console.error('Firestore purchase listener error:', err));
@@ -8013,10 +8043,12 @@ function getFarmBackupSlices() {
 function applyFarmBackupSlice(name, incoming) {
   if (incoming == null) return false;
   if (name === 'purchases' && isNonEmptyFarmList(incoming)) {
+    const incomingPurchases = incoming.filter(p => !isPurchaseSuppressed(p));
+    if (!incomingPurchases.length) return false;
     if (isNonEmptyFarmList(purchases)) {
-      purchases = mergePurchasesPreservingLocal(purchases, incoming);
+      purchases = mergePurchasesPreservingLocal(purchases, incomingPurchases);
     } else {
-      purchases = incoming.map((p, i) => normalisePurchaseRecord(p, i));
+      purchases = incomingPurchases.map((p, i) => normalisePurchaseRecord(p, i));
     }
     return true;
   }
@@ -9880,6 +9912,7 @@ function promptDeletePurchase(id) {
   dialogText.textContent = 'Deleting this purchase will deduct this stock from your live inventory.';
   confirmDialog.showModal();
 }
+window.promptDeletePurchase = promptDeletePurchase;
 
 function resetStockReturnForm() {
   if (returnIdInput) returnIdInput.value = '';
@@ -11330,12 +11363,10 @@ function setupEventListeners() {
             })
             .catch(err => console.error('Firestore treatment delete error:', err));
         } else if (confirmedDeleteType === 'purchase') {
-          deleteLaptopCloudRecord('purchases', confirmedDeleteId, purchases)
-            .then(() => {
-              purchases = purchases.filter(p => String(p.id) !== String(confirmedDeleteId));
-              saveStorage();
-              renderAll();
-            })
+          const removed = typeof removeLocalPurchase === 'function' ? removeLocalPurchase(confirmedDeleteId) : null;
+          saveStorage();
+          renderAll();
+          deleteDocsFromCloud('purchases', removed ? [removed, { id: confirmedDeleteId, firestoreId: removed.firestoreId }] : [{ id: confirmedDeleteId }])
             .catch(err => console.error('Firestore purchase delete error:', err));
         } else if (confirmedDeleteType === 'stockReturn') {
           deleteLaptopCloudRecord('stockReturns', confirmedDeleteId, stockReturns)
