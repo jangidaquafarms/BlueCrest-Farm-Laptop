@@ -7126,18 +7126,26 @@ function saveCrop1ClosingPackedStock(event){
 
 document.addEventListener('DOMContentLoaded',()=>{ const input=document.getElementById('crop1ClosingProductSearch'), picker=document.getElementById('crop1ClosingProductPicker'), dd=document.getElementById('crop1ClosingProductDropdown'); input?.addEventListener('focus',()=>{if(dd){dd.hidden=false;filterCrop1ClosingProductDropdown();}}); input?.addEventListener('input',()=>{crop1ClosingKeyboardIndex=-1;filterCrop1ClosingProductDropdown();}); input?.addEventListener('keydown',handleCrop1ClosingProductKeydown); picker?.querySelector('.closing-product-search-wrap')?.addEventListener('click',()=>{input?.focus();if(dd)dd.hidden=false;filterCrop1ClosingProductDropdown();}); document.addEventListener('click',e=>{if(picker&&!picker.contains(e.target)&&dd){dd.hidden=true;crop1ClosingKeyboardIndex=-1;}}); document.getElementById('crop1ClosingProduct')?.addEventListener('change',updateCrop1ClosingProductPreview);document.getElementById('crop1ClosingQty')?.addEventListener('input',updateCrop1ClosingProductPreview);document.getElementById('crop1ClosingPackedStockForm')?.addEventListener('submit',saveCrop1ClosingPackedStock);});
 
+function getPurchaseYear(p) {
+  const direct = Number(p?.year || p?.cropYear || 0);
+  if (direct >= 2000 && direct <= 2100) return direct;
+  const d = String(p?.date || p?.purchaseDate || '');
+  const m = d.match(/(20\d{2})/);
+  if (m) return Number(m[1]);
+  const activeYear = Number(activeCycle?.year || 0);
+  return activeYear >= 2000 ? activeYear : 0;
+}
+function getPurchaseCrop(p) {
+  return pondwiseNormaliseCrop(p?.crop || p?.cropCycle || activeCycle?.crop || 'Crop 1');
+}
 function getActivePurchases() {
   const cycleYear = Number(activeCycle?.year || new Date().getFullYear());
   const cycleCrop = pondwiseNormaliseCrop(activeCycle?.crop || 'Crop 1');
-  return (Array.isArray(purchases) ? purchases : []).filter(p => {
-    // Purchase records are ERP records and already carry their own Year + Crop.
-    // Do NOT infer their cycle from pond fields or getRecordYear(), because a
-    // purchase has no pond and that inference can make a perfectly valid
-    // purchase disappear from Purchase History.
-    const py = Number(p?.year || p?.cropYear || String(p?.date || '').slice(0,4) || 0);
-    const pc = pondwiseNormaliseCrop(p?.crop || p?.cropCycle || 'Crop 1');
-    return py === cycleYear && pc === cycleCrop;
-  });
+  const list = Array.isArray(purchases) ? purchases : [];
+  const matched = list.filter(p => getPurchaseYear(p) === cycleYear && getPurchaseCrop(p) === cycleCrop);
+  if (matched.length) return matched;
+  // Recovery: bills exist but year was stored wrong/missing. Keep crop match so history does not go blank.
+  return list.filter(p => getPurchaseCrop(p) === cycleCrop);
 }
 function getActiveStockReturns() { return stockReturns.filter(isRecordInActiveCycle); }
 function getActiveVendorTransactions() { return vendorTransactions.filter(isRecordInActiveCycle); }
@@ -7257,6 +7265,67 @@ function dedupePondsByCycleAndName(list) {
   return result;
 }
 
+function normalisePurchaseRecord(p, index) {
+  const unitPrice = parseFloat(p?.unitPrice !== undefined ? p.unitPrice : (p?.unitRate !== undefined ? p.unitRate : (p?.price || 0))) || 0;
+  const qty = parseFloat(p?.qty !== undefined ? p.qty : (p?.packSize || 1)) || 0;
+  const totalAmount = parseFloat(p?.totalAmount !== undefined ? p.totalAmount : (qty * unitPrice)) || (qty * unitPrice);
+  const crop = getPurchaseCrop(p);
+  const year = getPurchaseYear(p) || Number(activeCycle?.year || 2026);
+  return {
+    ...p,
+    id: p?.id || p?.firestoreId || `pur_local_${index}_${String(p?.date || '')}_${String(p?.name || '').trim().toLowerCase()}_${String(p?.supplier || '').trim().toLowerCase()}`,
+    date: p?.date || new Date().toISOString().split('T')[0],
+    year,
+    crop,
+    cycleId: p?.cycleId || cycleIdFor(year, crop),
+    invoiceNo: String(p?.invoiceNo || '').trim(),
+    name: String(p?.name || 'Unnamed Product').trim(),
+    company: String(p?.company || 'Local').trim(),
+    supplier: String(p?.supplier || '').trim(),
+    category: p?.category || 'Fertilizer',
+    qty,
+    unit: p?.unit || p?.packUnit || 'Bag/Pkt',
+    packSize: Number(p?.packSize || 1),
+    stockUnit: p?.stockUnit || p?.unit || p?.packUnit || 'Bag/Pkt',
+    unitPrice,
+    invoiceUnitPrice: p?.invoiceUnitPrice !== undefined && p?.invoiceUnitPrice !== null
+      ? (parseFloat(p.invoiceUnitPrice) || 0)
+      : (String(p?.category || '').trim().toLowerCase() === 'feed' ? unitPrice : null),
+    finalUnitPrice: p?.finalUnitPrice !== undefined && p?.finalUnitPrice !== null
+      ? (parseFloat(p.finalUnitPrice) || unitPrice)
+      : (String(p?.category || '').trim().toLowerCase() === 'feed' ? unitPrice : null),
+    totalAmount
+  };
+}
+
+function mergePurchasesPreservingLocal(localList, cloudList) {
+  const local = (Array.isArray(localList) ? localList : []).map((p, i) => normalisePurchaseRecord(p, i));
+  const cloud = (Array.isArray(cloudList) ? cloudList : []).map((p, i) => normalisePurchaseRecord({
+    ...p,
+    id: p?.id || p?.firestoreId
+  }, i + 100000));
+  if (!cloud.length) return local;
+  const byId = new Map();
+  local.forEach(p => { if (p?.id) byId.set(String(p.id), p); });
+  cloud.forEach(p => {
+    if (!p?.id) return;
+    const existing = byId.get(String(p.id));
+    if (!existing) {
+      byId.set(String(p.id), p);
+      return;
+    }
+    const existingQty = Number(existing.qty || 0);
+    const cloudQty = Number(p.qty || 0);
+    const existingNamed = String(existing.name || '').trim() && existing.name !== 'Unnamed Product';
+    const cloudNamed = String(p.name || '').trim() && p.name !== 'Unnamed Product';
+    if (existingNamed && !cloudNamed) return;
+    if (existingQty > 0 && cloudQty <= 0) return;
+    byId.set(String(p.id), { ...existing, ...p, name: existingNamed ? existing.name : p.name, qty: existingQty > cloudQty ? existing.qty : p.qty, supplier: existing.supplier || p.supplier, crop: existing.crop || p.crop, year: existing.year || p.year });
+  });
+  const merged = [...byId.values()];
+  return merged.length ? merged : local;
+}
+
 // Legacy pond setup reset removed: production data must never be deleted automatically.
 function loadAndEnsureData() {
   try {
@@ -7268,6 +7337,8 @@ function loadAndEnsureData() {
     samples = JSON.parse(localStorage.getItem(STORAGE_KEYS.SAMPLES)) || [];
     harvests = JSON.parse(localStorage.getItem(STORAGE_KEYS.HARVESTS)) || [];
     purchases = JSON.parse(localStorage.getItem(STORAGE_KEYS.PURCHASES)) || [];
+    if (!Array.isArray(purchases)) purchases = [];
+    purchases = purchases.map((p, index) => normalisePurchaseRecord(p, index));
     stockReturns = JSON.parse(localStorage.getItem(STORAGE_KEYS.STOCK_RETURNS)) || [];
     treatments = JSON.parse(localStorage.getItem(STORAGE_KEYS.TREATMENTS)) || [];
     stockTransfers = JSON.parse(localStorage.getItem(STORAGE_KEYS.STOCK_TRANSFERS)) || [];
@@ -7478,11 +7549,13 @@ function loadAndEnsureData() {
           // so a saved purchase cannot disappear after a reload/device change. Merge cloud records
           // with local records to preserve older local-only purchases during migration.
           db.collection('purchases').onSnapshot(snapshot => {
-              const cloudPurchases = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-              const byId = new Map();
-              (Array.isArray(purchases) ? purchases : []).forEach(p => { if (p?.id) byId.set(String(p.id), p); });
-              cloudPurchases.forEach(p => { if (p?.id) byId.set(String(p.id), p); });
-              purchases = [...byId.values()];
+              const localBefore = Array.isArray(purchases) ? purchases.slice() : [];
+              const cloudPurchases = snapshot.docs.map(doc => {
+                const data = doc.data() || {};
+                return { ...data, id: data.id || doc.id, firestoreId: doc.id };
+              });
+              purchases = mergePurchasesPreservingLocal(localBefore, cloudPurchases);
+              if (!purchases.length && localBefore.length) purchases = localBefore.map((p, i) => normalisePurchaseRecord(p, i));
               try { localStorage.setItem(STORAGE_KEYS.PURCHASES, JSON.stringify(purchases)); } catch (e) { console.warn('Purchase local cache update failed:', e); }
               if (typeof renderAll === 'function') renderAll();
           }, err => console.error('Firestore purchase listener error:', err));
@@ -7585,35 +7658,7 @@ function loadAndEnsureData() {
   if (!treatments || treatments.length === 0) treatments = [...defaultTreatments];
   if (!vendorTransactions || vendorTransactions.length === 0) vendorTransactions = [...defaultVendorTransactions];
 
-  purchases = purchases.map((p, index) => {
-    const unitPrice = parseFloat(p.unitPrice !== undefined ? p.unitPrice : (p.unitRate !== undefined ? p.unitRate : (p.price || 0))) || 0;
-    const qty = parseFloat(p.qty !== undefined ? p.qty : (p.packSize || 1)) || 0;
-    const totalAmount = parseFloat(p.totalAmount !== undefined ? p.totalAmount : (qty * unitPrice)) || (qty * unitPrice);
-    return {
-      id: p.id || `pur_${Date.now()}_${index}`,
-      date: p.date || new Date().toISOString().split('T')[0],
-      year: Number(p.year || 2026),
-      crop: p.crop || 'Crop 1',
-      cycleId: p.cycleId || cycleIdFor(Number(p.year || 2026), p.crop || 'Crop 1'),
-      invoiceNo: (p.invoiceNo || '').trim(),
-      name: (p.name || 'Unnamed Product').trim(),
-      company: (p.company || 'Local').trim(),
-      supplier: (p.supplier || '').trim(),
-      category: p.category || 'Fertilizer',
-      qty: qty,
-      unit: p.unit || p.packUnit || 'Bag/Pkt',
-      packSize: Number(p.packSize || (String(p.unit || p.packUnit || '').toLowerCase() === 'bag/pkt' ? 1 : 1)),
-      stockUnit: p.stockUnit || p.unit || p.packUnit || 'Bag/Pkt',
-      unitPrice: unitPrice,
-      invoiceUnitPrice: p.invoiceUnitPrice !== undefined && p.invoiceUnitPrice !== null
-        ? (parseFloat(p.invoiceUnitPrice) || 0)
-        : (String(p.category || '').trim().toLowerCase() === 'feed' ? unitPrice : null),
-      finalUnitPrice: p.finalUnitPrice !== undefined && p.finalUnitPrice !== null
-        ? (parseFloat(p.finalUnitPrice) || unitPrice)
-        : (String(p.category || '').trim().toLowerCase() === 'feed' ? unitPrice : null),
-      totalAmount: totalAmount
-    };
-  });
+  purchases = (Array.isArray(purchases) ? purchases : []).map((p, index) => normalisePurchaseRecord(p, index));
 
   stockReturns = stockReturns.map((r, index) => {
     const unitPrice = parseFloat(r.unitPrice) || 0;
@@ -7656,6 +7701,7 @@ function saveStorage() {
   // on every unrelated save; this keeps Purchase History from repeatedly
   // serializing the entire farm history and avoids unnecessary UI stalls.
   const localCache = [
+    [STORAGE_KEYS.PURCHASES, purchases],
     [STORAGE_KEYS.STOCK_RETURNS, stockReturns],
     [STORAGE_KEYS.VENDOR_TXNS, vendorTransactions],
     [STORAGE_KEYS.VENDORS, vendors],
