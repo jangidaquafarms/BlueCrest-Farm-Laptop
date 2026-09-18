@@ -6223,11 +6223,19 @@ function startBlueCrestApp() {
     blueCrestAppStarted = true;
     probeFirebaseConnection();
     loadAndEnsureData();
-    setupGlobalCycleContext();
-    renderGlobalCycleSelector();
-    setupEventListeners();
-    renderAll();
-    autoPopulateLastFeed();
+    const afterCloud = () => {
+      persistAllLocalNow();
+      scheduleFarmCloudBackup();
+      setupGlobalCycleContext();
+      renderGlobalCycleSelector();
+      setupEventListeners();
+      renderAll();
+      autoPopulateLastFeed();
+    };
+    pullFarmFromCloud().then(afterCloud).catch(err => {
+      console.warn('Cloud farm restore skipped:', err);
+      afterCloud();
+    });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -7240,18 +7248,26 @@ function saveCrop1ClosingPackedStock(event){
 
 document.addEventListener('DOMContentLoaded',()=>{ const input=document.getElementById('crop1ClosingProductSearch'), picker=document.getElementById('crop1ClosingProductPicker'), dd=document.getElementById('crop1ClosingProductDropdown'); input?.addEventListener('focus',()=>{if(dd){dd.hidden=false;filterCrop1ClosingProductDropdown();}}); input?.addEventListener('input',()=>{crop1ClosingKeyboardIndex=-1;filterCrop1ClosingProductDropdown();}); input?.addEventListener('keydown',handleCrop1ClosingProductKeydown); picker?.querySelector('.closing-product-search-wrap')?.addEventListener('click',()=>{input?.focus();if(dd)dd.hidden=false;filterCrop1ClosingProductDropdown();}); document.addEventListener('click',e=>{if(picker&&!picker.contains(e.target)&&dd){dd.hidden=true;crop1ClosingKeyboardIndex=-1;}}); document.getElementById('crop1ClosingProduct')?.addEventListener('change',updateCrop1ClosingProductPreview);document.getElementById('crop1ClosingQty')?.addEventListener('input',updateCrop1ClosingProductPreview);document.getElementById('crop1ClosingPackedStockForm')?.addEventListener('submit',saveCrop1ClosingPackedStock);});
 
+function getPurchaseYear(p) {
+  const direct = Number(p?.year || p?.cropYear || 0);
+  if (direct >= 2000 && direct <= 2100) return direct;
+  const d = String(p?.date || p?.purchaseDate || '');
+  const m = d.match(/(20\d{2})/);
+  if (m) return Number(m[1]);
+  const activeYear = Number(activeCycle?.year || 0);
+  return activeYear >= 2000 ? activeYear : 0;
+}
+function getPurchaseCrop(p) {
+  return pondwiseNormaliseCrop(p?.crop || p?.cropCycle || activeCycle?.crop || 'Crop 1');
+}
 function getActivePurchases() {
   const cycleYear = Number(activeCycle?.year || new Date().getFullYear());
   const cycleCrop = pondwiseNormaliseCrop(activeCycle?.crop || 'Crop 1');
-  return (Array.isArray(purchases) ? purchases : []).filter(p => {
-    // Purchase records are ERP records and already carry their own Year + Crop.
-    // Do NOT infer their cycle from pond fields or getRecordYear(), because a
-    // purchase has no pond and that inference can make a perfectly valid
-    // purchase disappear from Purchase History.
-    const py = Number(p?.year || p?.cropYear || String(p?.date || '').slice(0,4) || 0);
-    const pc = pondwiseNormaliseCrop(p?.crop || p?.cropCycle || 'Crop 1');
-    return py === cycleYear && pc === cycleCrop;
-  });
+  const list = Array.isArray(purchases) ? purchases : [];
+  const matched = list.filter(p => getPurchaseYear(p) === cycleYear && getPurchaseCrop(p) === cycleCrop);
+  if (matched.length) return matched;
+  // Recovery: bills exist but year was stored wrong/missing. Keep crop match so history does not go blank.
+  return list.filter(p => getPurchaseCrop(p) === cycleCrop);
 }
 function getActiveStockReturns() { return stockReturns.filter(isRecordInActiveCycle); }
 function getActiveVendorTransactions() { return vendorTransactions.filter(isRecordInActiveCycle); }
@@ -7373,6 +7389,67 @@ function dedupePondsByCycleAndName(list) {
   return result;
 }
 
+function normalisePurchaseRecord(p, index) {
+  const unitPrice = parseFloat(p?.unitPrice !== undefined ? p.unitPrice : (p?.unitRate !== undefined ? p.unitRate : (p?.price || 0))) || 0;
+  const qty = parseFloat(p?.qty !== undefined ? p.qty : (p?.packSize || 1)) || 0;
+  const totalAmount = parseFloat(p?.totalAmount !== undefined ? p.totalAmount : (qty * unitPrice)) || (qty * unitPrice);
+  const crop = getPurchaseCrop(p);
+  const year = getPurchaseYear(p) || Number(activeCycle?.year || 2026);
+  return {
+    ...p,
+    id: p?.id || p?.firestoreId || `pur_local_${index}_${String(p?.date || '')}_${String(p?.name || '').trim().toLowerCase()}_${String(p?.supplier || '').trim().toLowerCase()}`,
+    date: p?.date || new Date().toISOString().split('T')[0],
+    year,
+    crop,
+    cycleId: p?.cycleId || cycleIdFor(year, crop),
+    invoiceNo: String(p?.invoiceNo || '').trim(),
+    name: String(p?.name || 'Unnamed Product').trim(),
+    company: String(p?.company || 'Local').trim(),
+    supplier: String(p?.supplier || '').trim(),
+    category: p?.category || 'Fertilizer',
+    qty,
+    unit: p?.unit || p?.packUnit || 'Bag/Pkt',
+    packSize: Number(p?.packSize || 1),
+    stockUnit: p?.stockUnit || p?.unit || p?.packUnit || 'Bag/Pkt',
+    unitPrice,
+    invoiceUnitPrice: p?.invoiceUnitPrice !== undefined && p?.invoiceUnitPrice !== null
+      ? (parseFloat(p.invoiceUnitPrice) || 0)
+      : (String(p?.category || '').trim().toLowerCase() === 'feed' ? unitPrice : null),
+    finalUnitPrice: p?.finalUnitPrice !== undefined && p?.finalUnitPrice !== null
+      ? (parseFloat(p.finalUnitPrice) || unitPrice)
+      : (String(p?.category || '').trim().toLowerCase() === 'feed' ? unitPrice : null),
+    totalAmount
+  };
+}
+
+function mergePurchasesPreservingLocal(localList, cloudList) {
+  const local = (Array.isArray(localList) ? localList : []).map((p, i) => normalisePurchaseRecord(p, i));
+  const cloud = (Array.isArray(cloudList) ? cloudList : []).map((p, i) => normalisePurchaseRecord({
+    ...p,
+    id: p?.id || p?.firestoreId
+  }, i + 100000));
+  if (!cloud.length) return local;
+  const byId = new Map();
+  local.forEach(p => { if (p?.id) byId.set(String(p.id), p); });
+  cloud.forEach(p => {
+    if (!p?.id) return;
+    const existing = byId.get(String(p.id));
+    if (!existing) {
+      byId.set(String(p.id), p);
+      return;
+    }
+    const existingQty = Number(existing.qty || 0);
+    const cloudQty = Number(p.qty || 0);
+    const existingNamed = String(existing.name || '').trim() && existing.name !== 'Unnamed Product';
+    const cloudNamed = String(p.name || '').trim() && p.name !== 'Unnamed Product';
+    if (existingNamed && !cloudNamed) return;
+    if (existingQty > 0 && cloudQty <= 0) return;
+    byId.set(String(p.id), { ...existing, ...p, name: existingNamed ? existing.name : p.name, qty: existingQty > cloudQty ? existing.qty : p.qty, supplier: existing.supplier || p.supplier, crop: existing.crop || p.crop, year: existing.year || p.year });
+  });
+  const merged = [...byId.values()];
+  return merged.length ? merged : local;
+}
+
 // Legacy pond setup reset removed: production data must never be deleted automatically.
 function loadAndEnsureData() {
   try {
@@ -7384,6 +7461,8 @@ function loadAndEnsureData() {
     samples = JSON.parse(localStorage.getItem(STORAGE_KEYS.SAMPLES)) || [];
     harvests = JSON.parse(localStorage.getItem(STORAGE_KEYS.HARVESTS)) || [];
     purchases = JSON.parse(localStorage.getItem(STORAGE_KEYS.PURCHASES)) || [];
+    if (!Array.isArray(purchases)) purchases = [];
+    purchases = purchases.map((p, index) => normalisePurchaseRecord(p, index));
     stockReturns = JSON.parse(localStorage.getItem(STORAGE_KEYS.STOCK_RETURNS)) || [];
     treatments = JSON.parse(localStorage.getItem(STORAGE_KEYS.TREATMENTS)) || [];
     stockTransfers = JSON.parse(localStorage.getItem(STORAGE_KEYS.STOCK_TRANSFERS)) || [];
@@ -7598,11 +7677,13 @@ function loadAndEnsureData() {
           // so a saved purchase cannot disappear after a reload/device change. Merge cloud records
           // with local records to preserve older local-only purchases during migration.
           db.collection('purchases').onSnapshot(snapshot => {
-              const cloudPurchases = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-              const byId = new Map();
-              (Array.isArray(purchases) ? purchases : []).forEach(p => { if (p?.id) byId.set(String(p.id), p); });
-              cloudPurchases.forEach(p => { if (p?.id) byId.set(String(p.id), p); });
-              purchases = [...byId.values()];
+              const localBefore = Array.isArray(purchases) ? purchases.slice() : [];
+              const cloudPurchases = snapshot.docs.map(doc => {
+                const data = doc.data() || {};
+                return { ...data, id: data.id || doc.id, firestoreId: doc.id };
+              });
+              purchases = mergePurchasesPreservingLocal(localBefore, cloudPurchases);
+              if (!purchases.length && localBefore.length) purchases = localBefore.map((p, i) => normalisePurchaseRecord(p, i));
               try { localStorage.setItem(STORAGE_KEYS.PURCHASES, JSON.stringify(purchases)); } catch (e) { console.warn('Purchase local cache update failed:', e); }
               if (typeof renderAll === 'function') renderAll();
           }, err => console.error('Firestore purchase listener error:', err));
@@ -7700,40 +7781,13 @@ function loadAndEnsureData() {
   ponds = dedupePondsByCycleAndName(ponds);
   if (!samples || samples.length === 0) samples = [...defaultSamples];
   if (!harvests || harvests.length === 0) harvests = [...defaultHarvests];
-  if (!purchases || purchases.length === 0) purchases = [...defaultPurchases];
+  // Do not seed demo purchases. An empty purchase list must be able to
+  // restore from the shared Firebase farm backup instead.
   if (!stockReturns || stockReturns.length === 0) stockReturns = [...defaultStockReturns];
   if (!treatments || treatments.length === 0) treatments = [...defaultTreatments];
   if (!vendorTransactions || vendorTransactions.length === 0) vendorTransactions = [...defaultVendorTransactions];
 
-  purchases = purchases.map((p, index) => {
-    const unitPrice = parseFloat(p.unitPrice !== undefined ? p.unitPrice : (p.unitRate !== undefined ? p.unitRate : (p.price || 0))) || 0;
-    const qty = parseFloat(p.qty !== undefined ? p.qty : (p.packSize || 1)) || 0;
-    const totalAmount = parseFloat(p.totalAmount !== undefined ? p.totalAmount : (qty * unitPrice)) || (qty * unitPrice);
-    return {
-      id: p.id || `pur_${Date.now()}_${index}`,
-      date: p.date || new Date().toISOString().split('T')[0],
-      year: Number(p.year || 2026),
-      crop: p.crop || 'Crop 1',
-      cycleId: p.cycleId || cycleIdFor(Number(p.year || 2026), p.crop || 'Crop 1'),
-      invoiceNo: (p.invoiceNo || '').trim(),
-      name: (p.name || 'Unnamed Product').trim(),
-      company: (p.company || 'Local').trim(),
-      supplier: (p.supplier || '').trim(),
-      category: p.category || 'Fertilizer',
-      qty: qty,
-      unit: p.unit || p.packUnit || 'Bag/Pkt',
-      packSize: Number(p.packSize || (String(p.unit || p.packUnit || '').toLowerCase() === 'bag/pkt' ? 1 : 1)),
-      stockUnit: p.stockUnit || p.unit || p.packUnit || 'Bag/Pkt',
-      unitPrice: unitPrice,
-      invoiceUnitPrice: p.invoiceUnitPrice !== undefined && p.invoiceUnitPrice !== null
-        ? (parseFloat(p.invoiceUnitPrice) || 0)
-        : (String(p.category || '').trim().toLowerCase() === 'feed' ? unitPrice : null),
-      finalUnitPrice: p.finalUnitPrice !== undefined && p.finalUnitPrice !== null
-        ? (parseFloat(p.finalUnitPrice) || unitPrice)
-        : (String(p.category || '').trim().toLowerCase() === 'feed' ? unitPrice : null),
-      totalAmount: totalAmount
-    };
-  });
+  purchases = (Array.isArray(purchases) ? purchases : []).map((p, index) => normalisePurchaseRecord(p, index));
 
   stockReturns = stockReturns.map((r, index) => {
     const unitPrice = parseFloat(r.unitPrice) || 0;
@@ -7804,6 +7858,175 @@ async function firebaseFirstDelete(collectionName, firestoreId, options = {}) {
   }
 }
 
+function isNonEmptyFarmList(value) {
+  return Array.isArray(value) && value.length > 0;
+}
+
+function getFarmBackupSlices() {
+  return {
+    purchases,
+    ponds,
+    feedEntries,
+    samples,
+    harvests,
+    treatments,
+    stockReturns,
+    stockTransfers,
+    vendorTransactions,
+    vendors,
+    ledgerEntries,
+    farmCycles,
+    activeCycle,
+    masterCatalogue,
+    customLedgerSubcategories,
+    customLedgerAccounts,
+    feedPhysicalStock,
+    feedMinStockKg,
+    feedStockAdjustments,
+    feedCropClosingAdjustments,
+    feedCropClosingAdjustmentHistory,
+    productMemory: typeof productMemory !== 'undefined' ? productMemory : {}
+  };
+}
+
+function applyFarmBackupSlice(name, incoming) {
+  if (incoming == null) return false;
+  if (name === 'purchases' && isNonEmptyFarmList(incoming)) {
+    if (isNonEmptyFarmList(purchases)) {
+      purchases = mergePurchasesPreservingLocal(purchases, incoming);
+    } else {
+      purchases = incoming.map((p, i) => normalisePurchaseRecord(p, i));
+    }
+    return true;
+  }
+  const assignList = (current, next) => {
+    if (!isNonEmptyFarmList(next)) return current;
+    if (isNonEmptyFarmList(current)) return current;
+    return next;
+  };
+  if (name === 'ponds') { const next = assignList(ponds, incoming); if (next !== ponds) { ponds = dedupePondsByCycleAndName(next); return true; } return false; }
+  if (name === 'feedEntries') { const next = assignList(feedEntries, incoming); if (next !== feedEntries) { feedEntries = next; return true; } return false; }
+  if (name === 'samples') { const next = assignList(samples, incoming); if (next !== samples) { samples = next; return true; } return false; }
+  if (name === 'harvests') { const next = assignList(harvests, incoming); if (next !== harvests) { harvests = next; return true; } return false; }
+  if (name === 'treatments') { const next = assignList(treatments, incoming); if (next !== treatments) { treatments = next; return true; } return false; }
+  if (name === 'stockReturns') { const next = assignList(stockReturns, incoming); if (next !== stockReturns) { stockReturns = next; return true; } return false; }
+  if (name === 'stockTransfers') { const next = assignList(stockTransfers, incoming); if (next !== stockTransfers) { stockTransfers = next; return true; } return false; }
+  if (name === 'vendorTransactions') { const next = assignList(vendorTransactions, incoming); if (next !== vendorTransactions) { vendorTransactions = next; return true; } return false; }
+  if (name === 'vendors') { const next = assignList(vendors, incoming); if (next !== vendors) { vendors = next; return true; } return false; }
+  if (name === 'ledgerEntries') { const next = assignList(ledgerEntries, incoming); if (next !== ledgerEntries) { ledgerEntries = next; return true; } return false; }
+  if (name === 'farmCycles') { const next = assignList(farmCycles, incoming); if (next !== farmCycles) { farmCycles = next; return true; } return false; }
+  if (name === 'masterCatalogue') { const next = assignList(masterCatalogue, incoming); if (next !== masterCatalogue) { masterCatalogue = next; return true; } return false; }
+  if (name === 'customLedgerSubcategories') { const next = assignList(customLedgerSubcategories, incoming); if (next !== customLedgerSubcategories) { customLedgerSubcategories = next; return true; } return false; }
+  if (name === 'customLedgerAccounts') { const next = assignList(customLedgerAccounts, incoming); if (next !== customLedgerAccounts) { customLedgerAccounts = next; return true; } return false; }
+  if (name === 'feedCropClosingAdjustments') { const next = assignList(feedCropClosingAdjustments, incoming); if (next !== feedCropClosingAdjustments) { feedCropClosingAdjustments = next; return true; } return false; }
+  if (name === 'feedCropClosingAdjustmentHistory') { const next = assignList(feedCropClosingAdjustmentHistory, incoming); if (next !== feedCropClosingAdjustmentHistory) { feedCropClosingAdjustmentHistory = next; return true; } return false; }
+  if (name === 'activeCycle' && incoming && incoming.year && incoming.crop && !(activeCycle && activeCycle.year && farmCycles.length)) {
+    activeCycle = incoming;
+    return true;
+  }
+  if (name === 'feedPhysicalStock' && incoming && typeof incoming === 'object' && !Array.isArray(incoming) && (!feedPhysicalStock || !Object.keys(feedPhysicalStock).length)) {
+    feedPhysicalStock = incoming;
+    return true;
+  }
+  if (name === 'feedMinStockKg' && incoming && typeof incoming === 'object' && !Array.isArray(incoming) && (!feedMinStockKg || !Object.keys(feedMinStockKg).length)) {
+    feedMinStockKg = incoming;
+    return true;
+  }
+  if (name === 'feedStockAdjustments' && isNonEmptyFarmList(incoming) && !isNonEmptyFarmList(feedStockAdjustments)) {
+    feedStockAdjustments = incoming;
+    return true;
+  }
+  if (name === 'productMemory' && incoming && typeof incoming === 'object' && typeof productMemory !== 'undefined' && (!productMemory || !Object.keys(productMemory).length)) {
+    productMemory = incoming;
+    return true;
+  }
+  return false;
+}
+
+async function pullFarmFromCloud() {
+  if (typeof db === 'undefined' || !db) return false;
+  const snap = await db.collection('farmBackup').get();
+  if (snap.empty) return false;
+  let restored = false;
+  snap.docs.forEach(doc => {
+    const data = doc.data() || {};
+    const incoming = Object.prototype.hasOwnProperty.call(data, 'items') ? data.items : data;
+    if (applyFarmBackupSlice(doc.id, incoming)) restored = true;
+  });
+  return restored;
+}
+
+async function pushFarmToCloud() {
+  if (typeof db === 'undefined' || !db) return;
+  const slices = getFarmBackupSlices();
+  const writes = [];
+  Object.entries(slices).forEach(([name, value]) => {
+    const isList = Array.isArray(value);
+    const isObj = value && typeof value === 'object' && !isList;
+    const emptyList = isList && !value.length;
+    const emptyObj = isObj && !Object.keys(value).length;
+    if (emptyList || emptyObj) return;
+    writes.push({ name, value });
+  });
+  for (let i = 0; i < writes.length; i += 400) {
+    const batch = db.batch();
+    writes.slice(i, i + 400).forEach(({ name, value }) => {
+      batch.set(db.collection('farmBackup').doc(name), {
+        items: value,
+        updatedAt: new Date().toISOString(),
+        count: Array.isArray(value) ? value.length : undefined
+      }, { merge: true });
+    });
+    await batch.commit();
+  }
+}
+
+let farmBackupTimer = null;
+function scheduleFarmCloudBackup() {
+  clearTimeout(farmBackupTimer);
+  farmBackupTimer = setTimeout(() => {
+    pushFarmToCloud().catch(err => console.warn('Farm cloud backup failed:', err));
+  }, 1500);
+}
+
+function persistAllLocalNow() {
+  const localCache = [
+    [STORAGE_KEYS.PURCHASES, purchases],
+    [STORAGE_KEYS.PONDS, ponds],
+    [STORAGE_KEYS.FEEDS, feedEntries],
+    [STORAGE_KEYS.SAMPLES, samples],
+    [STORAGE_KEYS.HARVESTS, harvests],
+    [STORAGE_KEYS.TREATMENTS, treatments],
+    [STORAGE_KEYS.STOCK_RETURNS, stockReturns],
+    [STORAGE_KEYS.STOCK_TRANSFERS, stockTransfers],
+    [STORAGE_KEYS.VENDOR_TXNS, vendorTransactions],
+    [STORAGE_KEYS.VENDORS, vendors],
+    [STORAGE_KEYS.LEDGER_ENTRIES, ledgerEntries],
+    [STORAGE_KEYS.LEDGER_SUBCATEGORIES, customLedgerSubcategories],
+    [STORAGE_KEYS.LEDGER_ACCOUNTS, customLedgerAccounts],
+    [STORAGE_KEYS.MASTER_CATALOGUE, masterCatalogue],
+    [STORAGE_KEYS.FEED_PHYSICAL_STOCK, feedPhysicalStock],
+    [STORAGE_KEYS.FEED_MIN_STOCK, feedMinStockKg],
+    [STORAGE_KEYS.FEED_ADJUSTMENTS, feedStockAdjustments],
+    [STORAGE_KEYS.PRODUCT_MEMORY, typeof productMemory !== 'undefined' ? productMemory : {}],
+    [STORAGE_KEYS.CROP1_CLOSING_PACKED_STOCK, typeof getCrop1ClosingPackedStockEntries === 'function' ? getCrop1ClosingPackedStockEntries() : []],
+    [STORAGE_KEYS.CROP2_CLOSING_PACKED_STOCK, typeof getCrop2ClosingPackedStockEntries === 'function' ? getCrop2ClosingPackedStockEntries() : []],
+    [STORAGE_KEYS.PHYSICAL_INVENTORY_SETTLEMENTS, typeof getPhysicalInventorySettlements === 'function' ? getPhysicalInventorySettlements() : []],
+    [STORAGE_KEYS.FARM_CYCLES, farmCycles],
+    [STORAGE_KEYS.ACTIVE_CYCLE, activeCycle],
+    ['bluecrest_feed_crop_closing_adjustments', feedCropClosingAdjustments],
+    ['bluecrest_feed_crop_closing_adjustment_history', feedCropClosingAdjustmentHistory]
+  ];
+  try {
+    localCache.forEach(([key, value]) => {
+      if (value === undefined) return;
+      localStorage.setItem(key, JSON.stringify(value));
+    });
+  } catch (e) {
+    console.warn('Local cache save skipped:', e);
+  }
+}
+
 function ensureRecordIds(records, prefix) {
   return (Array.isArray(records) ? records : []).map((record, index) => {
     if (record && (record.id != null || record.firestoreId != null) && String(record.firestoreId || record.id).trim()) return record;
@@ -7838,7 +8061,8 @@ async function uploadAllLocalFarmToFirebase() {
     if (Array.isArray(feedCropClosingAdjustments) && feedCropClosingAdjustments.length) {
       await commitFirestoreRecords('feedCropClosingAdjustments', ensureRecordIds(feedCropClosingAdjustments, 'fcc'));
     }
-    await persistLaptopCacheToFirebaseThenLocal();
+    persistAllLocalNow();
+    await pushFarmToCloud();
     setFirebaseStatus('connected');
     notifyFirebaseSave(true, 'All farm data');
   } catch (err) {
@@ -7850,46 +8074,9 @@ async function uploadAllLocalFarmToFirebase() {
   }
 }
 
-function getLaptopCachePairs() {
-  return [
-    [STORAGE_KEYS.STOCK_RETURNS, stockReturns],
-    [STORAGE_KEYS.VENDOR_TXNS, vendorTransactions],
-    [STORAGE_KEYS.VENDORS, vendors],
-    [STORAGE_KEYS.LEDGER_ENTRIES, ledgerEntries],
-    [STORAGE_KEYS.LEDGER_SUBCATEGORIES, customLedgerSubcategories],
-    [STORAGE_KEYS.LEDGER_ACCOUNTS, customLedgerAccounts],
-    [STORAGE_KEYS.MASTER_CATALOGUE, masterCatalogue],
-    [STORAGE_KEYS.FEED_PHYSICAL_STOCK, feedPhysicalStock],
-    [STORAGE_KEYS.FEED_MIN_STOCK, feedMinStockKg],
-    [STORAGE_KEYS.FEED_ADJUSTMENTS, feedStockAdjustments],
-    [STORAGE_KEYS.PRODUCT_MEMORY, productMemory],
-    [STORAGE_KEYS.CROP1_CLOSING_PACKED_STOCK, getCrop1ClosingPackedStockEntries()],
-    [STORAGE_KEYS.CROP2_CLOSING_PACKED_STOCK, getCrop2ClosingPackedStockEntries()],
-    [STORAGE_KEYS.PHYSICAL_INVENTORY_SETTLEMENTS, getPhysicalInventorySettlements()],
-    [STORAGE_KEYS.FARM_CYCLES, farmCycles],
-    [STORAGE_KEYS.ACTIVE_CYCLE, activeCycle],
-    ['bluecrest_feed_crop_closing_adjustments', feedCropClosingAdjustments],
-    ['bluecrest_feed_crop_closing_adjustment_history', feedCropClosingAdjustmentHistory]
-  ];
-}
-
-async function persistLaptopCacheToFirebaseThenLocal() {
-  const localCache = getLaptopCachePairs();
-  const payload = {};
-  localCache.forEach(([key, value]) => { payload[key] = value; });
-  requireFirebaseConnection();
-  await db.collection('laptopLocalCache').doc('state').set({
-    payload,
-    updatedAt: new Date().toISOString()
-  }, { merge: true });
-  localCache.forEach(([key, value]) => localStorage.setItem(key, JSON.stringify(value)));
-}
-
 function saveStorage() {
-  persistLaptopCacheToFirebaseThenLocal().catch(err => {
-    console.error('Farm cache Firebase save failed; local copy was not changed:', err);
-    notifyFirebaseSave(false, 'Farm cache', err);
-  });
+  persistAllLocalNow();
+  scheduleFarmCloudBackup();
 }
 
 function toggleNavGroup(groupId) {
@@ -16802,10 +16989,12 @@ function addBackupRows(moduleName, dataset, rows) {
 function exportCSV() {
   const headers = ['Date of Purchase','Crop','Invoice Number','Vendor','Category','Product Name','Company','Quantity','Unit','Pack Size','Stock Unit','Unit Price'];
   const rows = [headers];
-  const source = Array.isArray(purchases) ? purchases : [];
+  const cycleYear = Number(activeCycle?.year || new Date().getFullYear());
+  const cycleCrop = pondwiseNormaliseCrop(activeCycle?.crop || 'Crop 1');
+  const source = typeof getActivePurchases === 'function' ? getActivePurchases() : [];
   source.forEach(p => rows.push([
     p.date || '',
-    p.crop || '',
+    p.crop || cycleCrop,
     p.invoiceNo || '',
     p.supplier || '',
     p.category || '',
@@ -16822,12 +17011,13 @@ function exportCSV() {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = `bluecrest_purchase_${new Date().toISOString().slice(0,10)}.csv`;
+  const cropSlug = String(cycleCrop).replace(/\s+/g, '_');
+  link.download = `bluecrest_purchase_${cycleYear}_${cropSlug}_${new Date().toISOString().slice(0,10)}.csv`;
   document.body.appendChild(link);
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
-  bcAlert(`Purchase CSV exported successfully (${source.length} purchase item${source.length === 1 ? '' : 's'}).`);
+  bcAlert(`Purchase CSV exported for ${cycleYear} • ${cycleCrop} (${source.length} purchase item${source.length === 1 ? '' : 's'}).`);
 }
 
 function handleImportCSV(e) {
@@ -16875,6 +17065,10 @@ function handleImportCSV(e) {
       const rows = parsed.slice(1).filter(r => r.some(v => clean(v) !== ''));
       if (!rows.length) throw new Error('No purchase records found in the CSV.');
 
+      const cycleYear = Number(activeCycle?.year || new Date().getFullYear());
+      const cycleCrop = pondwiseNormaliseCrop(activeCycle?.crop || 'Crop 1');
+      const cycleId = typeof cycleIdFor === 'function' ? cycleIdFor(cycleYear, cycleCrop) : '';
+
       const incoming = rows.map((r, n) => {
         const get = k => clean(r[idx[k]]);
         const qty = Number(get('quantity').replace(/,/g,''));
@@ -16894,10 +17088,38 @@ function handleImportCSV(e) {
         const pack = Number.isFinite(packSize) && packSize > 0 ? packSize : (bagUnit && feed ? 25 : 1);
         const total = feed && bagUnit && stockUnit.toLowerCase() === 'kg' ? qty * pack * price : qty * price;
         const date = get('date of purchase') || new Date().toISOString().slice(0,10);
-        const crop = get('crop') || (typeof activeCycle !== 'undefined' ? activeCycle.crop : 'Crop 1') || 'Crop 1';
-        const year = Number((date.match(/\b(20\d{2})\b/) || [])[1] || (typeof activeCycle !== 'undefined' ? activeCycle.year : new Date().getFullYear()));
-        return { date, year, crop, cycleId: typeof cycleIdFor === 'function' ? cycleIdFor(year, crop) : '', invoiceNo:get('invoice number'), supplier:get('vendor'), category, name:get('product name'), company, qty, unit, packSize:pack, stockUnit, unitPrice:price, invoiceUnitPrice:feed ? price : null, finalUnitPrice:feed ? price : null, totalAmount:total };
+        // Always import into the Year + Crop selected in the top bar.
+        // A different crop/year in the file is ignored so other cycles are not changed.
+        return { date, year: cycleYear, crop: cycleCrop, cycleId, invoiceNo:get('invoice number'), supplier:get('vendor'), category, name:get('product name'), company, qty, unit, packSize:pack, stockUnit, unitPrice:price, invoiceUnitPrice:feed ? price : null, finalUnitPrice:feed ? price : null, totalAmount:total };
       });
+
+      const normalisePurchaseDate = v => {
+        const s = clean(v);
+        const iso = s.match(/^(\d{4}-\d{2}-\d{2})/);
+        if (iso) return iso[1];
+        const dmy = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
+        if (dmy) return `${dmy[3]}-${String(dmy[2]).padStart(2,'0')}-${String(dmy[1]).padStart(2,'0')}`;
+        return s;
+      };
+      const duplicateKey = p => [
+        normalisePurchaseDate(p?.date),
+        keyName(p?.name),
+        keyName(p?.supplier)
+      ].join('|');
+      const existingActive = typeof getActivePurchases === 'function' ? getActivePurchases() : [];
+      const existingKeys = new Set(existingActive.map(duplicateKey).filter(k => k && k !== '||'));
+      const duplicateIncoming = incoming.filter(r => existingKeys.has(duplicateKey(r)));
+      if (duplicateIncoming.length) {
+        const preview = duplicateIncoming.slice(0, 8).map(r => `${normalisePurchaseDate(r.date)} • ${r.name} • ${r.supplier} • qty ${r.qty}`).join('\n');
+        const extra = duplicateIncoming.length > 8 ? `\n…and ${duplicateIncoming.length - 8} more` : '';
+        const allowDuplicates = confirm(
+          `This CSV has ${duplicateIncoming.length} purchase${duplicateIncoming.length === 1 ? '' : 's'} with the same date, same product and same vendor as an existing ${cycleYear} • ${cycleCrop} entry.\n\n${preview}${extra}\n\nOK = import anyway as NEW extra line(s). Quantity will add on top of the old entry.\nCancel = stop the whole import. Nothing will be saved.`
+        );
+        if (!allowDuplicates) {
+          bcAlert(`Purchase CSV import cancelled. No purchases were added to ${cycleYear} • ${cycleCrop}.`);
+          return;
+        }
+      }
 
       const existingVendorKeys = new Set((Array.isArray(vendors) ? vendors : []).map(v => keyName(v?.name)).filter(Boolean));
       const newVendors = [];
@@ -16928,7 +17150,12 @@ function handleImportCSV(e) {
       });
 
       const imported = incoming.map((r, i) => ({ id:`pur_${Date.now()}_${i}_${Math.random().toString(36).slice(2,8)}`, ...r }));
-      purchases = imported.concat(Array.isArray(purchases) ? purchases : []);
+      const otherPurchases = (Array.isArray(purchases) ? purchases : []).filter(p => {
+        const py = Number(p?.year || p?.cropYear || String(p?.date || '').slice(0,4) || 0);
+        const pc = pondwiseNormaliseCrop(p?.crop || p?.cropCycle || 'Crop 1');
+        return !(py === cycleYear && pc === cycleCrop);
+      });
+      purchases = imported.concat(existingActive, otherPurchases);
       saveStorage();
       if (typeof ensureVendorMaster === 'function') ensureVendorMaster();
       if (typeof renderInventoryAndPurchases === 'function') renderInventoryAndPurchases();
@@ -16936,7 +17163,7 @@ function handleImportCSV(e) {
       if (typeof populatePurchaseVendorSelect === 'function') populatePurchaseVendorSelect('');
       if (typeof populateStatementVendorsDropdown === 'function') populateStatementVendorsDropdown();
       if (typeof renderAll === 'function') { try { renderAll(); } catch (renderErr) { console.warn('Purchase import saved; dashboard refresh had an error:', renderErr); } }
-      bcAlert(`Purchase CSV imported successfully.\n\n${imported.length} purchase item${imported.length === 1 ? '' : 's'} imported${newVendors.length ? `\n${newVendors.length} new vendor${newVendors.length === 1 ? '' : 's'} added` : ''}${newProducts.length ? `\n${newProducts.length} new product${newProducts.length === 1 ? '' : 's'} added` : ''}.`);
+      bcAlert(`Purchase CSV imported into ${cycleYear} • ${cycleCrop}.\n\n${imported.length} purchase item${imported.length === 1 ? '' : 's'} imported. Other crops were not changed.${newVendors.length ? `\n${newVendors.length} new vendor${newVendors.length === 1 ? '' : 's'} added` : ''}${newProducts.length ? `\n${newProducts.length} new product${newProducts.length === 1 ? '' : 's'} added` : ''}.`);
     } catch (err) {
       console.error('Purchase CSV import error:', err);
       bcAlert(`Unable to import Purchase CSV: ${err.message}`);
