@@ -16562,10 +16562,12 @@ function addBackupRows(moduleName, dataset, rows) {
 function exportCSV() {
   const headers = ['Date of Purchase','Crop','Invoice Number','Vendor','Category','Product Name','Company','Quantity','Unit','Pack Size','Stock Unit','Unit Price'];
   const rows = [headers];
-  const source = Array.isArray(purchases) ? purchases : [];
+  const cycleYear = Number(activeCycle?.year || new Date().getFullYear());
+  const cycleCrop = pondwiseNormaliseCrop(activeCycle?.crop || 'Crop 1');
+  const source = typeof getActivePurchases === 'function' ? getActivePurchases() : [];
   source.forEach(p => rows.push([
     p.date || '',
-    p.crop || '',
+    p.crop || cycleCrop,
     p.invoiceNo || '',
     p.supplier || '',
     p.category || '',
@@ -16582,12 +16584,13 @@ function exportCSV() {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = `bluecrest_purchase_${new Date().toISOString().slice(0,10)}.csv`;
+  const cropSlug = String(cycleCrop).replace(/\s+/g, '_');
+  link.download = `bluecrest_purchase_${cycleYear}_${cropSlug}_${new Date().toISOString().slice(0,10)}.csv`;
   document.body.appendChild(link);
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
-  bcAlert(`Purchase CSV exported successfully (${source.length} purchase item${source.length === 1 ? '' : 's'}).`);
+  bcAlert(`Purchase CSV exported for ${cycleYear} • ${cycleCrop} (${source.length} purchase item${source.length === 1 ? '' : 's'}).`);
 }
 
 function handleImportCSV(e) {
@@ -16635,6 +16638,10 @@ function handleImportCSV(e) {
       const rows = parsed.slice(1).filter(r => r.some(v => clean(v) !== ''));
       if (!rows.length) throw new Error('No purchase records found in the CSV.');
 
+      const cycleYear = Number(activeCycle?.year || new Date().getFullYear());
+      const cycleCrop = pondwiseNormaliseCrop(activeCycle?.crop || 'Crop 1');
+      const cycleId = typeof cycleIdFor === 'function' ? cycleIdFor(cycleYear, cycleCrop) : '';
+
       const incoming = rows.map((r, n) => {
         const get = k => clean(r[idx[k]]);
         const qty = Number(get('quantity').replace(/,/g,''));
@@ -16654,9 +16661,9 @@ function handleImportCSV(e) {
         const pack = Number.isFinite(packSize) && packSize > 0 ? packSize : (bagUnit && feed ? 25 : 1);
         const total = feed && bagUnit && stockUnit.toLowerCase() === 'kg' ? qty * pack * price : qty * price;
         const date = get('date of purchase') || new Date().toISOString().slice(0,10);
-        const crop = get('crop') || (typeof activeCycle !== 'undefined' ? activeCycle.crop : 'Crop 1') || 'Crop 1';
-        const year = Number((date.match(/\b(20\d{2})\b/) || [])[1] || (typeof activeCycle !== 'undefined' ? activeCycle.year : new Date().getFullYear()));
-        return { date, year, crop, cycleId: typeof cycleIdFor === 'function' ? cycleIdFor(year, crop) : '', invoiceNo:get('invoice number'), supplier:get('vendor'), category, name:get('product name'), company, qty, unit, packSize:pack, stockUnit, unitPrice:price, invoiceUnitPrice:feed ? price : null, finalUnitPrice:feed ? price : null, totalAmount:total };
+        // Always import into the Year + Crop selected in the top bar.
+        // A different crop/year in the file is ignored so other cycles are not changed.
+        return { date, year: cycleYear, crop: cycleCrop, cycleId, invoiceNo:get('invoice number'), supplier:get('vendor'), category, name:get('product name'), company, qty, unit, packSize:pack, stockUnit, unitPrice:price, invoiceUnitPrice:feed ? price : null, finalUnitPrice:feed ? price : null, totalAmount:total };
       });
 
       const existingVendorKeys = new Set((Array.isArray(vendors) ? vendors : []).map(v => keyName(v?.name)).filter(Boolean));
@@ -16688,7 +16695,13 @@ function handleImportCSV(e) {
       });
 
       const imported = incoming.map((r, i) => ({ id:`pur_${Date.now()}_${i}_${Math.random().toString(36).slice(2,8)}`, ...r }));
-      purchases = imported.concat(Array.isArray(purchases) ? purchases : []);
+      const existingActive = typeof getActivePurchases === 'function' ? getActivePurchases() : [];
+      const otherPurchases = (Array.isArray(purchases) ? purchases : []).filter(p => {
+        const py = Number(p?.year || p?.cropYear || String(p?.date || '').slice(0,4) || 0);
+        const pc = pondwiseNormaliseCrop(p?.crop || p?.cropCycle || 'Crop 1');
+        return !(py === cycleYear && pc === cycleCrop);
+      });
+      purchases = imported.concat(existingActive, otherPurchases);
       saveStorage();
       if (typeof ensureVendorMaster === 'function') ensureVendorMaster();
       if (typeof renderInventoryAndPurchases === 'function') renderInventoryAndPurchases();
@@ -16696,7 +16709,7 @@ function handleImportCSV(e) {
       if (typeof populatePurchaseVendorSelect === 'function') populatePurchaseVendorSelect('');
       if (typeof populateStatementVendorsDropdown === 'function') populateStatementVendorsDropdown();
       if (typeof renderAll === 'function') { try { renderAll(); } catch (renderErr) { console.warn('Purchase import saved; dashboard refresh had an error:', renderErr); } }
-      bcAlert(`Purchase CSV imported successfully.\n\n${imported.length} purchase item${imported.length === 1 ? '' : 's'} imported${newVendors.length ? `\n${newVendors.length} new vendor${newVendors.length === 1 ? '' : 's'} added` : ''}${newProducts.length ? `\n${newProducts.length} new product${newProducts.length === 1 ? '' : 's'} added` : ''}.`);
+      bcAlert(`Purchase CSV imported into ${cycleYear} • ${cycleCrop}.\n\n${imported.length} purchase item${imported.length === 1 ? '' : 's'} imported. Other crops were not changed.${newVendors.length ? `\n${newVendors.length} new vendor${newVendors.length === 1 ? '' : 's'} added` : ''}${newProducts.length ? `\n${newProducts.length} new product${newProducts.length === 1 ? '' : 's'} added` : ''}.`);
     } catch (err) {
       console.error('Purchase CSV import error:', err);
       bcAlert(`Unable to import Purchase CSV: ${err.message}`);
