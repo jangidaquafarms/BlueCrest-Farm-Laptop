@@ -7304,36 +7304,66 @@ function retagPurchaseToCrop(p, year, crop) {
 function repairPurchaseCropAssignments() {
   const list = Array.isArray(purchases) ? purchases : [];
   if (!list.length) return false;
-  let changed = false;
-  const years = [...new Set(list.map(p => getPurchaseYear(p) || Number(activeCycle?.year || 0)).filter(y => y >= 2000))];
-  years.forEach(year => {
-    const crop1 = list.filter(p => getPurchaseYear(p) === year && getPurchaseCrop(p) === 'Crop 1');
-    const crop2 = list.filter(p => getPurchaseYear(p) === year && getPurchaseCrop(p) === 'Crop 2');
-    if (crop2.length && !crop1.length) {
-      crop2.forEach(p => { retagPurchaseToCrop(p, year, 'Crop 1'); changed = true; });
-      return;
-    }
-    if (crop1.length && crop2.length) {
-      const keys = new Set(crop1.map(purchaseDedupeKey));
-      crop2.forEach(p => {
-        if (keys.has(purchaseDedupeKey(p))) {
-          retagPurchaseToCrop(p, year, 'Crop 1');
-          changed = true;
-        }
-      });
-    }
-  });
-  if (changed) {
+  const removed = [];
+
+  const collapse = rows => {
     const seen = new Set();
-    purchases = list.filter(p => {
-      const id = String(p?.id || p?.firestoreId || '');
-      const key = id || purchaseDedupeKey(p);
-      if (seen.has(key)) return false;
+    const kept = [];
+    rows.forEach(p => {
+      const key = `${getPurchaseYear(p)}|${getPurchaseCrop(p)}|${purchaseDedupeKey(p)}`;
+      if (seen.has(key)) {
+        removed.push(p);
+        return;
+      }
       seen.add(key);
-      return true;
+      kept.push(p);
     });
+    return kept;
+  };
+
+  let next = collapse(list);
+
+  const crop1KeysByYear = new Map();
+  next.forEach(p => {
+    if (getPurchaseCrop(p) !== 'Crop 1') return;
+    const year = getPurchaseYear(p);
+    if (!crop1KeysByYear.has(year)) crop1KeysByYear.set(year, new Set());
+    crop1KeysByYear.get(year).add(purchaseDedupeKey(p));
+  });
+  next = next.filter(p => {
+    const year = getPurchaseYear(p);
+    if (getPurchaseCrop(p) === 'Crop 2' && crop1KeysByYear.get(year)?.has(purchaseDedupeKey(p))) {
+      removed.push(p);
+      return false;
+    }
+    return true;
+  });
+
+  const byYear = new Map();
+  next.forEach(p => {
+    const year = getPurchaseYear(p);
+    if (!byYear.has(year)) byYear.set(year, []);
+    byYear.get(year).push(p);
+  });
+  const moved = [];
+  byYear.forEach((rows, year) => {
+    const hasCrop1 = rows.some(p => getPurchaseCrop(p) === 'Crop 1');
+    const crop2 = rows.filter(p => getPurchaseCrop(p) === 'Crop 2');
+    if (crop2.length && !hasCrop1) crop2.forEach(p => { retagPurchaseToCrop(p, year, 'Crop 1'); moved.push(p); });
+  });
+  next = collapse(Array.from(byYear.values()).flat());
+
+  const changed = removed.length > 0 || moved.length > 0 || next.length !== list.length;
+  if (!changed) return false;
+  purchases = next;
+  removed.forEach(p => suppressPurchaseRecord(p, p?.id));
+  if (removed.length && typeof deleteDocsFromCloud === 'function') {
+    deleteDocsFromCloud('purchases', removed).catch(err => console.warn('Could not delete duplicate purchases from Cloud:', err));
   }
-  return changed;
+  if (moved.length && typeof firebaseFirstBatchWrite === 'function') {
+    firebaseFirstBatchWrite('purchases', moved, { silent: true, label: 'Purchase' }).catch(() => {});
+  }
+  return true;
 }
 function getActivePurchases() {
   const cycleYear = Number(activeCycle?.year || new Date().getFullYear());
