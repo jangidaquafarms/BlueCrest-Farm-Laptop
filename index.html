@@ -106,6 +106,12 @@ body.app-body {
 .pill-btn { border: none; border-radius: var(--radius-pill); font-size: 0.8125rem; font-weight: 700; padding: 0.45rem 1rem; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; }
 .status-green { background-color: var(--brand-green); color: #ffffff; }
 .status-dot { width: 7px; height: 7px; background-color: #86efac; border-radius: 50%; }
+.firebase-status-badge { cursor: default; font-size: 0.75rem; }
+.firebase-status-badge.is-checking { background: #64748b; color: #ffffff; }
+.firebase-status-badge.is-connected { background: var(--brand-green); color: #ffffff; }
+.firebase-status-badge.is-disconnected { background: var(--brand-red); color: #ffffff; }
+.firebase-status-badge.is-checking .status-dot,
+.firebase-status-badge.is-disconnected .status-dot { background: #ffffff; }
 .action-blue { background-color: var(--brand-blue); color: #ffffff; }
 .action-red { background-color: var(--brand-red); color: #ffffff; }
 .secondary-btn { background: #f1f5f9; color: #334155; border: 1px solid var(--border-subtle); }
@@ -4585,6 +4591,11 @@ body.bc-return-modal-open{overflow:hidden!important}
             <select id="globalCropSelect" aria-label="Active farm crop"></select>
             <button type="button" class="small-button" id="manageCyclesBtn">Manage</button>
           </div>
+          <button type="button" class="pill-btn firebase-status-badge is-checking" id="firebaseStatusBadge" title="Checking Firebase connection">
+            <span class="status-dot"></span>
+            <span id="firebaseStatusLabel">Cloud: checking</span>
+          </button>
+          <button type="button" class="pill-btn action-blue" id="uploadAllToFirebaseBtn" title="Upload the farm currently in this Chrome to Firebase">Save all to Firebase</button>
           <button type="button" class="pill-btn status-green" id="activeCycleBadge">
             <span class="status-dot"></span> Active Cycle
           </button>
@@ -6110,12 +6121,107 @@ try {
     db = null;
 }
 
+let firebaseStatus = 'checking';
+
+function firebaseCollectionLabel(name) {
+    const map = {
+        ponds: 'Pond',
+        feeds: 'Feed record',
+        sampling: 'Sampling',
+        harvests: 'Harvest',
+        treatments: 'Treatment',
+        purchases: 'Purchase',
+        stockTransfers: 'Stock transfer',
+        stockReturns: 'Stock return',
+        vendorTransactions: 'Vendor payment',
+        ledgerEntries: 'Ledger entry',
+        farmCycles: 'Year & Crop',
+        pondLocks: 'Pond lock',
+        cropLocks: 'Crop lock',
+        lockAudit: 'Lock history',
+        feedCropClosingAdjustments: 'Feed closing stock',
+        feedCropClosingAdjustmentHistory: 'Feed closing history',
+        crop1ClosingPackedStock: 'Crop 1 closing stock',
+        crop2ClosingPackedStock: 'Crop 2 closing stock',
+        physicalInventorySettlements: 'Physical inventory',
+        laptopLocalCache: 'Farm cache',
+        appStatus: 'Cloud connection'
+    };
+    return map[name] || name;
+}
+
+function updateFirebaseStatusUI() {
+    const badge = document.getElementById('firebaseStatusBadge');
+    const label = document.getElementById('firebaseStatusLabel');
+    if (!badge || !label) return;
+    badge.classList.remove('is-checking', 'is-connected', 'is-disconnected');
+    if (firebaseStatus === 'connected') {
+        badge.classList.add('is-connected');
+        label.textContent = 'Cloud: connected';
+        badge.title = 'Firebase is connected. Saves go to the cloud first, then this computer.';
+    } else if (firebaseStatus === 'disconnected') {
+        badge.classList.add('is-disconnected');
+        label.textContent = 'Cloud: not connected';
+        badge.title = 'Firebase is not connected. Records are not saved until the cloud is available.';
+    } else {
+        badge.classList.add('is-checking');
+        label.textContent = 'Cloud: checking';
+        badge.title = 'Checking Firebase connection…';
+    }
+}
+
+function setFirebaseStatus(state) {
+    firebaseStatus = state;
+    updateFirebaseStatusUI();
+}
+
+function notifyFirebaseSave(ok, label, err) {
+    const detail = err && (err.message || String(err));
+    const message = ok
+        ? `${label} saved to Firebase`
+        : `${label} Firebase save failed${detail ? ': ' + detail : ''}`;
+    if (typeof window.bcNotify === 'function') window.bcNotify(message, ok ? 'success' : 'error');
+    else if (ok) console.log(message);
+    else console.error(message);
+}
+
+function notifyFirebaseDelete(ok, label, err) {
+    const detail = err && (err.message || String(err));
+    const message = ok
+        ? `${label} deleted from Firebase`
+        : `${label} Firebase delete failed${detail ? ': ' + detail : ''}`;
+    if (typeof window.bcNotify === 'function') window.bcNotify(message, ok ? 'success' : 'error');
+    else if (ok) console.log(message);
+    else console.error(message);
+}
+
+function requireFirebaseConnection() {
+    if (typeof db === 'undefined' || !db) {
+        setFirebaseStatus('disconnected');
+        throw new Error('Firebase is not connected. Open this page with internet access. Local data was not changed.');
+    }
+}
+
+async function probeFirebaseConnection() {
+    setFirebaseStatus('checking');
+    try {
+        requireFirebaseConnection();
+        await db.collection('ponds').limit(1).get();
+        setFirebaseStatus('connected');
+    } catch (err) {
+        console.error('Firebase connection probe failed:', err);
+        setFirebaseStatus('disconnected');
+        notifyFirebaseSave(false, 'Cloud connection', err);
+    }
+}
+
 // --- Firebase Authentication ---
 // Authentication is temporarily disabled as an access gate. Firebase Auth remains
 // initialized so it can be re-enabled later without changing the rest of the app.
 function startBlueCrestApp() {
     if (blueCrestAppStarted) return;
     blueCrestAppStarted = true;
+    probeFirebaseConnection();
     loadAndEnsureData();
     setupGlobalCycleContext();
     renderGlobalCycleSelector();
@@ -6762,7 +6868,6 @@ function saveProductMemoryEntry(name, company, price, category, unit) {
     category: category || productMemory[k]?.category || 'Fertilizer',
     unit: unit || productMemory[k]?.unit || 'Bag/Pkt'
   };
-  localStorage.setItem(STORAGE_KEYS.PRODUCT_MEMORY, JSON.stringify(productMemory));
 }
 
 function cycleIdFor(year, crop) {
@@ -6824,9 +6929,17 @@ function getCrop1ClosingCycle() {
     return { id: `${year}|crop 1`, year, crop: 'Crop 1' };
 }
 function getCrop1ClosingPackedStockEntries() { try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.CROP1_CLOSING_PACKED_STOCK) || '[]'); } catch(e) { return []; } }
-function saveCrop1ClosingPackedStockEntries(entries) { localStorage.setItem(STORAGE_KEYS.CROP1_CLOSING_PACKED_STOCK, JSON.stringify(entries)); }
+function saveCrop1ClosingPackedStockEntries(entries) {
+  const list = Array.isArray(entries) ? entries : [];
+  return firebaseFirstBatchWrite('crop1ClosingPackedStock', list, { label: 'Crop 1 closing stock' })
+    .then(() => localStorage.setItem(STORAGE_KEYS.CROP1_CLOSING_PACKED_STOCK, JSON.stringify(list)));
+}
 function getCrop2ClosingPackedStockEntries() { try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.CROP2_CLOSING_PACKED_STOCK) || '[]'); } catch(e) { return []; } }
-function saveCrop2ClosingPackedStockEntries(entries) { localStorage.setItem(STORAGE_KEYS.CROP2_CLOSING_PACKED_STOCK, JSON.stringify(entries)); }
+function saveCrop2ClosingPackedStockEntries(entries) {
+  const list = Array.isArray(entries) ? entries : [];
+  return firebaseFirstBatchWrite('crop2ClosingPackedStock', list, { label: 'Crop 2 closing stock' })
+    .then(() => localStorage.setItem(STORAGE_KEYS.CROP2_CLOSING_PACKED_STOCK, JSON.stringify(list)));
+}
 function getCrop2ClosingCycle() {
     const active = typeof getActiveCycle === 'function' ? getActiveCycle() : activeCycle;
     const year = Number(active?.year) || new Date().getFullYear();
@@ -6869,8 +6982,8 @@ function handleCrop2ClosingProductKeydown(e){ const input=e.currentTarget,dd=doc
 function updateCrop2ClosingProductPreview(){ const name=document.getElementById('crop2ClosingProduct')?.value||'',qty=Number(document.getElementById('crop2ClosingQty')?.value||0),pe=document.getElementById('crop2ClosingPrice'),ve=document.getElementById('crop2ClosingValue'),ie=document.getElementById('crop2ClosingProductInfo'); if(!name){if(pe)pe.value='';if(ve)ve.value='';if(ie)ie.textContent='Select a product to fetch its Crop 2 cost price.';return;} const x=getCrop2ClosingProductPrice(name);if(pe)pe.value=`₹${x.price.toLocaleString('en-IN',{maximumFractionDigits:2})} / ${x.unit}`;if(ve)ve.value=`₹${(qty*x.price).toLocaleString('en-IN',{maximumFractionDigits:2})}`;if(ie)ie.innerHTML=`${escapeHtml(x.source)}: <strong>₹${x.price.toLocaleString('en-IN',{maximumFractionDigits:2})}/${escapeHtml(x.unit)}</strong>${x.vendor?' • '+escapeHtml(x.vendor):''}`; }
 function openCrop2ClosingPackedStockModal(){ const m=document.getElementById('crop2ClosingPackedStockModal');if(!m)return;crop2ClosingEditingId=null;populateCrop2ClosingProductSelect();document.getElementById('crop2ClosingPackedStockForm')?.reset();const s=document.getElementById('crop2ClosingProduct');if(s)s.value='';const input=document.getElementById('crop2ClosingProductSearch'),dd=document.getElementById('crop2ClosingProductDropdown');if(input)input.value='';if(dd)dd.hidden=true;updateCrop2ClosingProductPreview();renderCrop2ClosingPackedStockSavedList();const submit=m.querySelector('button[type="submit"]');if(submit)submit.textContent='Save Closing Stock';m.showModal(); }
 function editCrop2ClosingPackedStock(id){ const entry=getCrop2ClosingPackedStockEntries().find(e=>String(e.id)===String(id));if(!entry){bcAlert('Closing inventory entry not found.');return;}crop2ClosingEditingId=String(entry.id);const m=document.getElementById('crop2ClosingPackedStockModal');if(!m)return;populateCrop2ClosingProductSelect();selectCrop2ClosingProduct(String(entry.name||''));const qtyEl=document.getElementById('crop2ClosingQty');if(qtyEl)qtyEl.value=Number(entry.qty)||0;updateCrop2ClosingProductPreview();renderCrop2ClosingPackedStockSavedList();const submit=m.querySelector('button[type="submit"]');if(submit)submit.textContent='Update Closing Stock';m.showModal(); }
-function deleteCrop2ClosingPackedStock(id){ if(!confirm('Delete this Crop 2 closing stock entry?'))return;saveCrop2ClosingPackedStockEntries(getCrop2ClosingPackedStockEntries().filter(e=>String(e.id)!==String(id)));crop2ClosingEditingId=null;renderCropClosingStockPanel();renderCrop2ClosingPackedStockSavedList();if(document.getElementById('cropClosingStockViewModal')?.open)openCropClosingStockViewModal(); }
-function saveCrop2ClosingPackedStock(event){ event.preventDefault();const name=document.getElementById('crop2ClosingProduct')?.value||'',qty=Number(document.getElementById('crop2ClosingQty')?.value||0);if(!name||!(qty>0)){bcAlert('Select a product and enter a closing quantity.');return;}const cycle=getCrop2ClosingCycle(),x=getCrop2ClosingProductPrice(name);if(!(x.price>0)){bcAlert('No cost price is available for this product. Record a Crop 2 purchase or ensure it came from Crop 1 opening stock first.');return;}const fifo=getFifoPhysicalClosingValuation(name,x.category||'Fertilizer',cycle.year,'Crop 2',qty,new Date().toISOString().slice(0,10),crop2ClosingEditingId);if(!fifo.ok){bcAlert(`${fifo.reason}${fifo.excessQty>0 ? ` Excess: ${fifo.excessQty.toLocaleString('en-IN',{maximumFractionDigits:3})} base units.` : ''}`);return;}if(!(fifo.closingValue>=0)||(qty>0&&!(fifo.closingRate>0))){bcAlert('FIFO closing valuation could not be calculated. Check purchases, returns and usage history.');return;}const entries=getCrop2ClosingPackedStockEntries();let idx=crop2ClosingEditingId?entries.findIndex(e=>String(e.id)===String(crop2ClosingEditingId)):-1;const key=name.trim().toLowerCase();const duplicateIdx=entries.findIndex(e=>e.cycleId===cycle.id&&String(e.name).trim().toLowerCase()===key&&(!crop2ClosingEditingId||String(e.id)!==String(crop2ClosingEditingId)));if(duplicateIdx>=0){bcAlert('A Crop 2 closing inventory entry for this product already exists. Edit that entry instead.');return;}const rec={id:idx>=0?entries[idx].id:`c2close-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,cycleId:cycle.id,year:cycle.year,crop:'Crop 2',name:name.trim(),company:x.vendor,category:x.category||'Fertilizer',unit:x.unit,qty,price:Number(fifo.closingRate||0),value:Number(fifo.closingValue||0),fifoClosingValue:Number(fifo.closingValue||0),fifoClosingRate:Number(fifo.closingRate||0),fifoTheoreticalQty:Number(fifo.theoreticalQty||0),fifoShortageQty:Number(fifo.shortageQty||0),fifoShortageValue:Number(fifo.adjustmentValue||0),fifoValuation:'FIFO physical closing',date:new Date().toISOString()};if(idx>=0)entries[idx]=rec;else entries.push(rec);saveCrop2ClosingPackedStockEntries(entries);const wasEditing=idx>=0;crop2ClosingEditingId=null;renderCropClosingStockPanel();renderCrop2ClosingPackedStockSavedList();document.getElementById('crop2ClosingQty').value='';updateCrop2ClosingProductPreview();const submit=document.getElementById('crop2ClosingPackedStockModal')?.querySelector('button[type="submit"]');if(submit)submit.textContent='Save Closing Stock';bcAlert(wasEditing?'Crop 2 closing stock updated.':'Crop 2 closing stock saved.'); }
+function deleteCrop2ClosingPackedStock(id){ if(!confirm('Delete this Crop 2 closing stock entry?'))return; const next=getCrop2ClosingPackedStockEntries().filter(e=>String(e.id)!==String(id)); firebaseFirstDelete('crop2ClosingPackedStock', String(id), {label:'Crop 2 closing stock'}).then(()=>{ localStorage.setItem(STORAGE_KEYS.CROP2_CLOSING_PACKED_STOCK, JSON.stringify(next)); crop2ClosingEditingId=null; renderCropClosingStockPanel(); renderCrop2ClosingPackedStockSavedList(); if(document.getElementById('cropClosingStockViewModal')?.open)openCropClosingStockViewModal(); }).catch(err=>console.error(err)); }
+function saveCrop2ClosingPackedStock(event){ event.preventDefault();const name=document.getElementById('crop2ClosingProduct')?.value||'',qty=Number(document.getElementById('crop2ClosingQty')?.value||0);if(!name||!(qty>0)){bcAlert('Select a product and enter a closing quantity.');return;}const cycle=getCrop2ClosingCycle(),x=getCrop2ClosingProductPrice(name);if(!(x.price>0)){bcAlert('No cost price is available for this product. Record a Crop 2 purchase or ensure it came from Crop 1 opening stock first.');return;}const fifo=getFifoPhysicalClosingValuation(name,x.category||'Fertilizer',cycle.year,'Crop 2',qty,new Date().toISOString().slice(0,10),crop2ClosingEditingId);if(!fifo.ok){bcAlert(`${fifo.reason}${fifo.excessQty>0 ? ` Excess: ${fifo.excessQty.toLocaleString('en-IN',{maximumFractionDigits:3})} base units.` : ''}`);return;}if(!(fifo.closingValue>=0)||(qty>0&&!(fifo.closingRate>0))){bcAlert('FIFO closing valuation could not be calculated. Check purchases, returns and usage history.');return;}const entries=getCrop2ClosingPackedStockEntries();let idx=crop2ClosingEditingId?entries.findIndex(e=>String(e.id)===String(crop2ClosingEditingId)):-1;const key=name.trim().toLowerCase();const duplicateIdx=entries.findIndex(e=>e.cycleId===cycle.id&&String(e.name).trim().toLowerCase()===key&&(!crop2ClosingEditingId||String(e.id)!==String(crop2ClosingEditingId)));if(duplicateIdx>=0){bcAlert('A Crop 2 closing inventory entry for this product already exists. Edit that entry instead.');return;}const rec={id:idx>=0?entries[idx].id:`c2close-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,cycleId:cycle.id,year:cycle.year,crop:'Crop 2',name:name.trim(),company:x.vendor,category:x.category||'Fertilizer',unit:x.unit,qty,price:Number(fifo.closingRate||0),value:Number(fifo.closingValue||0),fifoClosingValue:Number(fifo.closingValue||0),fifoClosingRate:Number(fifo.closingRate||0),fifoTheoreticalQty:Number(fifo.theoreticalQty||0),fifoShortageQty:Number(fifo.shortageQty||0),fifoShortageValue:Number(fifo.adjustmentValue||0),fifoValuation:'FIFO physical closing',date:new Date().toISOString()};if(idx>=0)entries[idx]=rec;else entries.push(rec);saveCrop2ClosingPackedStockEntries(entries).then(()=>{const wasEditing=idx>=0;crop2ClosingEditingId=null;renderCropClosingStockPanel();renderCrop2ClosingPackedStockSavedList();document.getElementById('crop2ClosingQty').value='';updateCrop2ClosingProductPreview();const submit=document.getElementById('crop2ClosingPackedStockModal')?.querySelector('button[type="submit"]');if(submit)submit.textContent='Save Closing Stock';bcAlert(wasEditing?'Crop 2 closing stock updated.':'Crop 2 closing stock saved.');}).catch(err=>console.error(err)); }
 function openActiveCropClosingPackedStockModal(){ const crop=String((typeof getActiveCycle==='function'?getActiveCycle():activeCycle)?.crop||'').trim().toLowerCase(); if(crop==='crop 2') openCrop2ClosingPackedStockModal(); else openCrop1ClosingPackedStockModal(); }
 document.addEventListener('DOMContentLoaded',()=>{ const input=document.getElementById('crop2ClosingProductSearch'),picker=document.getElementById('crop2ClosingProductPicker'),dd=document.getElementById('crop2ClosingProductDropdown');input?.addEventListener('focus',()=>{if(dd){dd.hidden=false;filterCrop2ClosingProductDropdown();}});input?.addEventListener('input',()=>{crop2ClosingKeyboardIndex=-1;filterCrop2ClosingProductDropdown();});input?.addEventListener('keydown',handleCrop2ClosingProductKeydown);picker?.querySelector('.closing-product-search-wrap')?.addEventListener('click',()=>{input?.focus();if(dd)dd.hidden=false;filterCrop2ClosingProductDropdown();});document.addEventListener('click',e=>{if(picker&&!picker.contains(e.target)&&dd){dd.hidden=true;crop2ClosingKeyboardIndex=-1;}});document.getElementById('crop2ClosingProduct')?.addEventListener('change',updateCrop2ClosingProductPreview);document.getElementById('crop2ClosingQty')?.addEventListener('input',updateCrop2ClosingProductPreview);document.getElementById('crop2ClosingPackedStockForm')?.addEventListener('submit',saveCrop2ClosingPackedStock);});
 
@@ -7101,7 +7214,7 @@ function editCrop1ClosingPackedStock(id){
     if(submit)submit.textContent='Update Closing Stock';
     m.showModal();
 }
-function deleteCrop1ClosingPackedStock(id){ if(!confirm('Delete this Crop 1 closing stock entry?'))return; saveCrop1ClosingPackedStockEntries(getCrop1ClosingPackedStockEntries().filter(e=>String(e.id)!==String(id))); crop1ClosingEditingId=null; renderCropClosingStockPanel(); renderCrop1ClosingPackedStockSavedList(); if(document.getElementById('cropClosingStockViewModal')?.open) openCropClosingStockViewModal(); }
+function deleteCrop1ClosingPackedStock(id){ if(!confirm('Delete this Crop 1 closing stock entry?'))return; const next=getCrop1ClosingPackedStockEntries().filter(e=>String(e.id)!==String(id)); firebaseFirstDelete('crop1ClosingPackedStock', String(id), {label:'Crop 1 closing stock'}).then(()=>{ localStorage.setItem(STORAGE_KEYS.CROP1_CLOSING_PACKED_STOCK, JSON.stringify(next)); crop1ClosingEditingId=null; renderCropClosingStockPanel(); renderCrop1ClosingPackedStockSavedList(); if(document.getElementById('cropClosingStockViewModal')?.open) openCropClosingStockViewModal(); }).catch(err=>console.error(err)); }
 function saveCrop1ClosingPackedStock(event){
     event.preventDefault(); const name=document.getElementById('crop1ClosingProduct')?.value||'', qty=Number(document.getElementById('crop1ClosingQty')?.value||0); if(!name||!(qty>0)){bcAlert('Select a product and enter a closing quantity.');return;}
     const cycle=getCrop1ClosingCycle(), x=getCrop1ClosingProductPrice(name); if(!(x.price>0)){bcAlert('No purchase price is available for this product. Please record a purchase first.');return;}
@@ -7115,13 +7228,14 @@ function saveCrop1ClosingPackedStock(event){
     if(duplicateIdx>=0){bcAlert('A closing inventory entry for this product already exists. Edit that entry instead.');return;}
     const rec={id:idx>=0?entries[idx].id:`c1close-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,cycleId:cycle.id,year:cycle.year,crop:'Crop 1',name:name.trim(),company:x.vendor,category:x.category||'Fertilizer',unit:x.unit,qty,price:Number(fifo.closingRate||0),value:Number(fifo.closingValue||0),fifoClosingValue:Number(fifo.closingValue||0),fifoClosingRate:Number(fifo.closingRate||0),fifoTheoreticalQty:Number(fifo.theoreticalQty||0),fifoShortageQty:Number(fifo.shortageQty||0),fifoShortageValue:Number(fifo.adjustmentValue||0),fifoValuation:'FIFO physical closing',date:new Date().toISOString()};
     if(idx>=0)entries[idx]=rec;else entries.push(rec);
-    saveCrop1ClosingPackedStockEntries(entries);
-    const wasEditing=idx>=0;
-    crop1ClosingEditingId=null;
-    renderCropClosingStockPanel(); renderCrop1ClosingPackedStockSavedList();
-    document.getElementById('crop1ClosingQty').value=''; updateCrop1ClosingProductPreview();
-    const submit=document.getElementById('crop1ClosingPackedStockModal')?.querySelector('button[type="submit"]'); if(submit)submit.textContent='Save Closing Stock';
-    bcAlert(wasEditing?'Closing stock updated.':'Closing stock saved.');
+    saveCrop1ClosingPackedStockEntries(entries).then(() => {
+      const wasEditing=idx>=0;
+      crop1ClosingEditingId=null;
+      renderCropClosingStockPanel(); renderCrop1ClosingPackedStockSavedList();
+      document.getElementById('crop1ClosingQty').value=''; updateCrop1ClosingProductPreview();
+      const submit=document.getElementById('crop1ClosingPackedStockModal')?.querySelector('button[type="submit"]'); if(submit)submit.textContent='Save Closing Stock';
+      bcAlert(wasEditing?'Closing stock updated.':'Closing stock saved.');
+    }).catch(err => console.error('Crop 1 closing stock Firebase save failed:', err));
 }
 
 document.addEventListener('DOMContentLoaded',()=>{ const input=document.getElementById('crop1ClosingProductSearch'), picker=document.getElementById('crop1ClosingProductPicker'), dd=document.getElementById('crop1ClosingProductDropdown'); input?.addEventListener('focus',()=>{if(dd){dd.hidden=false;filterCrop1ClosingProductDropdown();}}); input?.addEventListener('input',()=>{crop1ClosingKeyboardIndex=-1;filterCrop1ClosingProductDropdown();}); input?.addEventListener('keydown',handleCrop1ClosingProductKeydown); picker?.querySelector('.closing-product-search-wrap')?.addEventListener('click',()=>{input?.focus();if(dd)dd.hidden=false;filterCrop1ClosingProductDropdown();}); document.addEventListener('click',e=>{if(picker&&!picker.contains(e.target)&&dd){dd.hidden=true;crop1ClosingKeyboardIndex=-1;}}); document.getElementById('crop1ClosingProduct')?.addEventListener('change',updateCrop1ClosingProductPreview);document.getElementById('crop1ClosingQty')?.addEventListener('input',updateCrop1ClosingProductPreview);document.getElementById('crop1ClosingPackedStockForm')?.addEventListener('submit',saveCrop1ClosingPackedStock);});
@@ -7141,17 +7255,19 @@ function getActivePurchases() {
 }
 function getActiveStockReturns() { return stockReturns.filter(isRecordInActiveCycle); }
 function getActiveVendorTransactions() { return vendorTransactions.filter(isRecordInActiveCycle); }
-function syncFarmCyclesToFirebase() {
-  if (!db || !Array.isArray(farmCycles)) return;
-  farmCycles.forEach(c => {
-    if (!c || !c.id || !c.year || !c.crop) return;
-    db.collection('farmCycles').doc(String(c.id)).set({
+function syncFarmCyclesToFirebase(options = {}) {
+  if (!Array.isArray(farmCycles) || !farmCycles.length) return Promise.resolve();
+  const records = farmCycles
+    .filter(c => c && c.id && c.year && c.crop)
+    .map(c => ({
       id: String(c.id),
       year: Number(c.year),
       crop: String(c.crop).trim(),
       name: c.name || `${c.year} ${c.crop}`
-    }, { merge: true }).catch(err => console.error('Farm cycle Firebase sync error:', err));
-  });
+    }));
+  if (!records.length) return Promise.resolve();
+  return firebaseFirstBatchWrite('farmCycles', records, { silent: options.silent !== false, label: 'Year & Crop' })
+    .catch(err => console.error('Farm cycle Firebase sync error:', err));
 }
 function ensureFarmCycles() {
   const map = new Map();
@@ -7198,7 +7314,7 @@ function setupGlobalCycleContext() {
   cs?.addEventListener('change',()=>setActiveCycle(activeCycle.year,cs.value));
   document.getElementById('manageCyclesBtn')?.addEventListener('click',()=>{renderCycleManagerList();document.getElementById('cycleManagerModal')?.classList.add('active');});
   document.getElementById('closeCycleManagerBtn')?.addEventListener('click',()=>document.getElementById('cycleManagerModal')?.classList.remove('active'));
-  document.getElementById('cycleForm')?.addEventListener('submit',e=>{e.preventDefault();const year=Number(document.getElementById('cycleYearInput').value);const crop=document.getElementById('cycleCropInput').value.trim();if(!year||!crop)return;const id=cycleIdFor(year,crop);if(!farmCycles.some(c=>c.id===id)){farmCycles.push({id,year,crop,name:`${year} ${crop}`});farmCycles.sort((a,b)=>a.year-b.year||a.crop.localeCompare(b.crop,undefined,{numeric:true}));localStorage.setItem(STORAGE_KEYS.FARM_CYCLES,JSON.stringify(farmCycles));syncFarmCyclesToFirebase();setActiveCycle(year,crop);renderCycleManagerList();e.target.reset();}});
+  document.getElementById('cycleForm')?.addEventListener('submit',e=>{e.preventDefault();const year=Number(document.getElementById('cycleYearInput').value);const crop=document.getElementById('cycleCropInput').value.trim();if(!year||!crop)return;const id=cycleIdFor(year,crop);const cycle={id,year,crop,name:`${year} ${crop}`};(async()=>{try{if(!farmCycles.some(c=>c.id===id)){await firebaseFirstBatchWrite('farmCycles',cycle);farmCycles.push(cycle);farmCycles.sort((a,b)=>a.year-b.year||a.crop.localeCompare(b.crop,undefined,{numeric:true}));localStorage.setItem(STORAGE_KEYS.FARM_CYCLES,JSON.stringify(farmCycles));}setActiveCycle(year,crop);renderCycleManagerList();e.target.reset();}catch(err){console.error('Farm cycle save failed:',err);}})();});
 }
 
 function dedupePondsByCycleAndName(list) {
@@ -7320,6 +7436,7 @@ function loadAndEnsureData() {
   try {
       if (db) {
           db.collection('ponds').onSnapshot(snapshot => {
+              setFirebaseStatus('connected');
               // Pond Master is shared by mobile + laptop. Always read the
               // Firestore document data as the logical pond identity; the
               // Firestore document ID is only the storage key.
@@ -7362,7 +7479,10 @@ function loadAndEnsureData() {
                 setTimeout(() => reconcileExisting(), 100);
                 setTimeout(() => reconcileExisting(), 1200);
               }
-          }, err => console.error("Firestore pond listener error:", err));
+          }, err => {
+            setFirebaseStatus('disconnected');
+            console.error("Firestore pond listener error:", err);
+          });
 
           db.collection('feeds').onSnapshot(snapshot => {
             // Firestore is authoritative for shared operational records.
@@ -7639,23 +7759,99 @@ function loadAndEnsureData() {
   saveStorage();
 }
 
-async function firebaseFirstBatchWrite(collectionName, records) {
+async function firebaseFirstBatchWrite(collectionName, records, options = {}) {
   // Login gate is temporarily disabled. Firestore Security Rules still control
   // whether cloud writes are permitted for the current Firebase session.
-
-  if (typeof db === 'undefined' || !db) throw new Error('Firebase is not connected. Data was not saved.');
-  const list = Array.isArray(records) ? records : [records];
-  const batch = db.batch();
-  list.forEach(record => batch.set(db.collection(collectionName).doc(String(record.id)), record, { merge: true }));
-  await batch.commit();
+  const label = options.label || firebaseCollectionLabel(collectionName);
+  const silent = options.silent === true;
+  try {
+    await commitFirestoreRecords(collectionName, records);
+    setFirebaseStatus('connected');
+    if (!silent) notifyFirebaseSave(true, label);
+  } catch (err) {
+    setFirebaseStatus('disconnected');
+    if (!silent) notifyFirebaseSave(false, label, err);
+    throw err;
+  }
 }
 
-function saveStorage() {
-  // Firestore is authoritative for these large operational collections and
-  // their listeners already refresh the local cache. Do not stringify them
-  // on every unrelated save; this keeps Purchase History from repeatedly
-  // serializing the entire farm history and avoids unnecessary UI stalls.
-  const localCache = [
+async function commitFirestoreRecords(collectionName, records) {
+  requireFirebaseConnection();
+  const list = (Array.isArray(records) ? records : [records]).filter(record => record && (record.firestoreId != null || record.id != null));
+  for (let i = 0; i < list.length; i += 400) {
+    const chunk = list.slice(i, i + 400);
+    const batch = db.batch();
+    chunk.forEach(record => {
+      const docId = String(record.firestoreId || record.id).trim();
+      if (!docId) throw new Error('A record is missing its ID and cannot be saved.');
+      batch.set(db.collection(collectionName).doc(docId), record, { merge: true });
+    });
+    await batch.commit();
+  }
+}
+
+async function firebaseFirstDelete(collectionName, firestoreId, options = {}) {
+  const label = options.label || firebaseCollectionLabel(collectionName);
+  try {
+    requireFirebaseConnection();
+    await db.collection(collectionName).doc(String(firestoreId)).delete();
+    setFirebaseStatus('connected');
+    notifyFirebaseDelete(true, label);
+  } catch (err) {
+    setFirebaseStatus('disconnected');
+    notifyFirebaseDelete(false, label, err);
+    throw err;
+  }
+}
+
+function ensureRecordIds(records, prefix) {
+  return (Array.isArray(records) ? records : []).map((record, index) => {
+    if (record && (record.id != null || record.firestoreId != null) && String(record.firestoreId || record.id).trim()) return record;
+    return { ...(record || {}), id: `${prefix}_${Date.now()}_${index}` };
+  });
+}
+
+async function uploadAllLocalFarmToFirebase() {
+  if (!confirm('Upload the farm currently saved in this Chrome to Firebase?\n\nDo this on the laptop Chrome that has the real farm. Firebase is updated first, then this computer.')) return;
+  const btn = document.getElementById('uploadAllToFirebaseBtn');
+  if (btn) btn.disabled = true;
+  try {
+    requireFirebaseConnection();
+    const pondRecords = (Array.isArray(ponds) ? ponds : []).map(p => {
+      const firestoreId = String(p.firestoreId || canonicalPondFirestoreId(p.cycleId || cycleIdFor(p.year, p.crop), p.id || p.name));
+      return { ...p, firestoreId };
+    });
+    await commitFirestoreRecords('ponds', pondRecords);
+    await commitFirestoreRecords('feeds', ensureRecordIds(feedEntries, 'feed'));
+    await commitFirestoreRecords('sampling', ensureRecordIds(samples, 'sample'));
+    await commitFirestoreRecords('harvests', ensureRecordIds(harvests, 'harvest'));
+    await commitFirestoreRecords('treatments', ensureRecordIds(treatments, 'treatment'));
+    await commitFirestoreRecords('purchases', ensureRecordIds(purchases, 'purchase'));
+    await commitFirestoreRecords('stockTransfers', ensureRecordIds(stockTransfers, 'st'));
+    await commitFirestoreRecords('stockReturns', ensureRecordIds(stockReturns, 'sret'));
+    await commitFirestoreRecords('vendorTransactions', ensureRecordIds(vendorTransactions, 'vtxn'));
+    await commitFirestoreRecords('ledgerEntries', ensureRecordIds(ledgerEntries, 'ledger'));
+    await commitFirestoreRecords('farmCycles', ensureRecordIds(farmCycles, 'cycle'));
+    await commitFirestoreRecords('crop1ClosingPackedStock', ensureRecordIds(getCrop1ClosingPackedStockEntries(), 'c1close'));
+    await commitFirestoreRecords('crop2ClosingPackedStock', ensureRecordIds(getCrop2ClosingPackedStockEntries(), 'c2close'));
+    await commitFirestoreRecords('physicalInventorySettlements', ensureRecordIds(getPhysicalInventorySettlements(), 'pis'));
+    if (Array.isArray(feedCropClosingAdjustments) && feedCropClosingAdjustments.length) {
+      await commitFirestoreRecords('feedCropClosingAdjustments', ensureRecordIds(feedCropClosingAdjustments, 'fcc'));
+    }
+    await persistLaptopCacheToFirebaseThenLocal();
+    setFirebaseStatus('connected');
+    notifyFirebaseSave(true, 'All farm data');
+  } catch (err) {
+    console.error('Upload all farm data to Firebase failed:', err);
+    setFirebaseStatus('disconnected');
+    notifyFirebaseSave(false, 'All farm data', err);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+function getLaptopCachePairs() {
+  return [
     [STORAGE_KEYS.STOCK_RETURNS, stockReturns],
     [STORAGE_KEYS.VENDOR_TXNS, vendorTransactions],
     [STORAGE_KEYS.VENDORS, vendors],
@@ -7666,14 +7862,34 @@ function saveStorage() {
     [STORAGE_KEYS.FEED_PHYSICAL_STOCK, feedPhysicalStock],
     [STORAGE_KEYS.FEED_MIN_STOCK, feedMinStockKg],
     [STORAGE_KEYS.FEED_ADJUSTMENTS, feedStockAdjustments],
+    [STORAGE_KEYS.PRODUCT_MEMORY, productMemory],
+    [STORAGE_KEYS.CROP1_CLOSING_PACKED_STOCK, getCrop1ClosingPackedStockEntries()],
+    [STORAGE_KEYS.CROP2_CLOSING_PACKED_STOCK, getCrop2ClosingPackedStockEntries()],
+    [STORAGE_KEYS.PHYSICAL_INVENTORY_SETTLEMENTS, getPhysicalInventorySettlements()],
+    [STORAGE_KEYS.FARM_CYCLES, farmCycles],
+    [STORAGE_KEYS.ACTIVE_CYCLE, activeCycle],
     ['bluecrest_feed_crop_closing_adjustments', feedCropClosingAdjustments],
     ['bluecrest_feed_crop_closing_adjustment_history', feedCropClosingAdjustmentHistory]
   ];
-  try {
-    localCache.forEach(([key, value]) => localStorage.setItem(key, JSON.stringify(value)));
-  } catch (e) {
-    console.warn('Local cache save skipped:', e);
-  }
+}
+
+async function persistLaptopCacheToFirebaseThenLocal() {
+  const localCache = getLaptopCachePairs();
+  const payload = {};
+  localCache.forEach(([key, value]) => { payload[key] = value; });
+  requireFirebaseConnection();
+  await db.collection('laptopLocalCache').doc('state').set({
+    payload,
+    updatedAt: new Date().toISOString()
+  }, { merge: true });
+  localCache.forEach(([key, value]) => localStorage.setItem(key, JSON.stringify(value)));
+}
+
+function saveStorage() {
+  persistLaptopCacheToFirebaseThenLocal().catch(err => {
+    console.error('Farm cache Firebase save failed; local copy was not changed:', err);
+    notifyFirebaseSave(false, 'Farm cache', err);
+  });
 }
 
 function toggleNavGroup(groupId) {
@@ -8688,7 +8904,9 @@ function getPhysicalInventorySettlements() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.PHYSICAL_INVENTORY_SETTLEMENTS) || '[]'); } catch(e) { return []; }
 }
 function savePhysicalInventorySettlements(rows) {
-  localStorage.setItem(STORAGE_KEYS.PHYSICAL_INVENTORY_SETTLEMENTS, JSON.stringify(Array.isArray(rows) ? rows : []));
+  const list = Array.isArray(rows) ? rows : [];
+  return firebaseFirstBatchWrite('physicalInventorySettlements', list, { label: 'Physical inventory' })
+    .then(() => localStorage.setItem(STORAGE_KEYS.PHYSICAL_INVENTORY_SETTLEMENTS, JSON.stringify(list)));
 }
 function getActivePhysicalInventorySettlements() {
   const cycleId = activeCycle?.id;
@@ -8837,11 +9055,13 @@ function savePhysicalInventorySettlement(event) {
     systemQty:system, physicalQty:physical, differenceQty:difference, rate, adjustmentValue,
     pondAllocations, usageBasis:usageTotal > 0 ? 'Product usage by pond' : 'No pond usage found', date:new Date().toISOString()
   };
-  all.push(rec); savePhysicalInventorySettlements(all);
+  all.push(rec);
+  savePhysicalInventorySettlements(all).then(() => {
   renderPhysicalSettlementSavedList(); updatePhysicalSettlementPreview();
   document.getElementById('physicalInventorySettlementModal').dataset.editingId='';
   bcAlert(difference < -0.000001 ? `Physical shortage saved: ${Math.abs(difference).toFixed(3)} ${item.unit || ''}. ₹${Math.round(adjustmentValue).toLocaleString('en-IN')} recognized as physical inventory loss.` : difference > 0.000001 ? `Physical excess saved: ${difference.toFixed(3)} ${item.unit || ''}.` : 'Physical stock matched system stock.');
   renderInventoryAndPurchases(); renderFinanceOverview(); renderPondwisePnl();
+  }).catch(err => console.error('Physical inventory Firebase save failed:', err));
 }
 function getActivePhysicalSettlementAdjustmentForPond(pondId, productName) {
   const key = String(productName||'').trim().toLowerCase();
@@ -10214,6 +10434,7 @@ function renderStockReturnHistory() {
 }
 
 function setupEventListeners() {
+  document.getElementById('uploadAllToFirebaseBtn')?.addEventListener('click', uploadAllLocalFarmToFirebase);
   document.getElementById('stockTransferForm')?.addEventListener('submit', saveStockTransfer);
   document.getElementById('stockTransferCancelBtn')?.addEventListener('click', closeStockTransferModal);
   document.getElementById('closeStockTransferBtn')?.addEventListener('click', closeStockTransferModal);
@@ -10673,9 +10894,8 @@ function setupEventListeners() {
   }
 
   async function deleteLaptopCloudRecord(collectionName, recordId, records) {
-    if (!db) return;
     const firestoreId = resolveLaptopFirestoreId(collectionName, recordId, records);
-    await db.collection(collectionName).doc(firestoreId).delete();
+    await firebaseFirstDelete(collectionName, firestoreId);
   }
 
   if (confirmDialog) {
@@ -10694,38 +10914,39 @@ function setupEventListeners() {
               saveStorage();
               renderAll();
             })
-            .catch(err => console.error('Firestore sampling delete error:', err));
+            .catch(err => {
+              console.error('Firestore sampling delete error:', err);
+            });
         } else if (confirmedDeleteType === 'pond') {
-          const pondToDelete = ponds.find(p => String(p.id) === String(deleteTargetId));
+          const pondToDelete = ponds.find(p => String(p.id) === String(confirmedDeleteId));
           const pondNameToDelete = pondToDelete?.name || pondToDelete?.pondName || '';
-          ponds = ponds.filter(p => String(p.id) !== String(deleteTargetId));
-          samples = samples.filter(s => {
-            const refs = [s.pondId, s.pond, s.pondName].map(v => String(v ?? '').trim().toLowerCase());
-            return !refs.includes(String(deleteTargetId).trim().toLowerCase()) &&
-                   (!pondNameToDelete || !refs.includes(String(pondNameToDelete).trim().toLowerCase()));
-          });
-          harvests = harvests.filter(h => {
-            const refs = [h.pondId, h.pond, h.pondName].map(v => String(v ?? '').trim().toLowerCase());
-            return !refs.includes(String(deleteTargetId).trim().toLowerCase()) &&
-                   (!pondNameToDelete || !refs.includes(String(pondNameToDelete).trim().toLowerCase()));
-          });
-          treatments = treatments.filter(t => {
-            const refs = [t.pondId, t.pond, t.pondName].map(v => String(v ?? '').trim().toLowerCase());
-            return !refs.includes(String(deleteTargetId).trim().toLowerCase()) &&
-                   (!pondNameToDelete || !refs.includes(String(pondNameToDelete).trim().toLowerCase()));
-          });
-          // Re-render immediately after the local pond deletion so the remaining
-          // pond cards keep their own Edit/Delete actions. Do not wait for the
-          // asynchronous Firebase cascade to finish.
-          saveStorage();
-          renderAll();
-          if (db) {
-            deletePondFromFirebaseCascade(confirmedDeleteId, pondNameToDelete, pondToDelete)
-              .catch(err => {
-                console.error('Firestore pond cascade delete error:', err);
-                bcAlert('Pond cloud deletion failed. Please check the connection and try again.');
+          deletePondFromFirebaseCascade(confirmedDeleteId, pondNameToDelete, pondToDelete)
+            .then(() => {
+              ponds = ponds.filter(p => String(p.id) !== String(confirmedDeleteId));
+              samples = samples.filter(s => {
+                const refs = [s.pondId, s.pond, s.pondName].map(v => String(v ?? '').trim().toLowerCase());
+                return !refs.includes(String(confirmedDeleteId).trim().toLowerCase()) &&
+                       (!pondNameToDelete || !refs.includes(String(pondNameToDelete).trim().toLowerCase()));
               });
-          }
+              harvests = harvests.filter(h => {
+                const refs = [h.pondId, h.pond, h.pondName].map(v => String(v ?? '').trim().toLowerCase());
+                return !refs.includes(String(confirmedDeleteId).trim().toLowerCase()) &&
+                       (!pondNameToDelete || !refs.includes(String(pondNameToDelete).trim().toLowerCase()));
+              });
+              treatments = treatments.filter(t => {
+                const refs = [t.pondId, t.pond, t.pondName].map(v => String(v ?? '').trim().toLowerCase());
+                return !refs.includes(String(confirmedDeleteId).trim().toLowerCase()) &&
+                       (!pondNameToDelete || !refs.includes(String(pondNameToDelete).trim().toLowerCase()));
+              });
+              saveStorage();
+              renderAll();
+              notifyFirebaseDelete(true, 'Pond');
+            })
+            .catch(err => {
+              console.error('Firestore pond cascade delete error:', err);
+              setFirebaseStatus('disconnected');
+              notifyFirebaseDelete(false, 'Pond', err);
+            });
         } else if (confirmedDeleteType === 'feed') {
           deleteLaptopCloudRecord('feeds', confirmedDeleteId, feedEntries)
             .then(() => {
@@ -10763,18 +10984,24 @@ function setupEventListeners() {
               renderAll();
             })
             .catch(err => console.error('Firestore treatment delete error:', err));
-        } else if (deleteTargetType === 'purchase') {
-          // Keep local and Firebase deletion in sync. The Firebase listener can
-          // otherwise re-introduce a purchase that was deleted only locally.
-          if (db) {
-            db.collection('purchases').doc(String(deleteTargetId)).delete()
-              .catch(err => console.error('Firestore purchase delete error:', err));
-          }
-          purchases = purchases.filter(p => String(p.id) !== String(deleteTargetId));
-        } else if (deleteTargetType === 'stockReturn') {
-          stockReturns = stockReturns.filter(r => r.id !== deleteTargetId);
+        } else if (confirmedDeleteType === 'purchase') {
+          deleteLaptopCloudRecord('purchases', confirmedDeleteId, purchases)
+            .then(() => {
+              purchases = purchases.filter(p => String(p.id) !== String(confirmedDeleteId));
+              saveStorage();
+              renderAll();
+            })
+            .catch(err => console.error('Firestore purchase delete error:', err));
+        } else if (confirmedDeleteType === 'stockReturn') {
+          deleteLaptopCloudRecord('stockReturns', confirmedDeleteId, stockReturns)
+            .then(() => {
+              stockReturns = stockReturns.filter(r => String(r.id) !== String(confirmedDeleteId));
+              saveStorage();
+              renderAll();
+            })
+            .catch(err => console.error('Firestore stock return delete error:', err));
         }
-        if (!['sample','feed','harvest','treatment'].includes(confirmedDeleteType)) {
+        if (!['sample','feed','harvest','treatment','pond','purchase','stockReturn'].includes(confirmedDeleteType)) {
           saveStorage();
           renderAll();
         }
@@ -10873,17 +11100,11 @@ async function handleMultiItemPurchaseSubmit(e) {
       console.error('Purchase saved but UI refresh failed:', renderErr);
     }
     if (purchaseMessageEl) {
-      purchaseMessageEl.textContent = cloudSyncError
-        ? `✓ Purchase saved on this laptop. ⚠ Cloud sync failed: ${cloudSyncError?.message || cloudSyncError}`
-        : `✓ Purchase saved successfully (${records.length} item${records.length === 1 ? '' : 's'}).`;
-    }
-    if (cloudSyncError) {
-      bcAlert(`Purchase saved on this laptop, but Firebase sync failed.\n\n${cloudSyncError?.message || cloudSyncError}\n\nThe record has NOT been removed from this laptop.`);
+      purchaseMessageEl.textContent = `✓ Purchase saved to Firebase (${records.length} item${records.length === 1 ? '' : 's'}).`;
     }
   } catch (err) {
-    console.error('Purchase local save failed:', err);
+    console.error('Purchase Firebase save failed:', err);
     if (purchaseMessageEl) purchaseMessageEl.textContent = `⚠ Purchase could not be saved: ${err?.message || err}`;
-    bcAlert(`Purchase could not be saved.\n\n${err?.message || err}`);
   }
 }
 function getAvailableStockBeforeReturn(productName, category, year, crop, returnDate, excludeReturnId = '', additionalReturns = []) {
@@ -11810,15 +12031,18 @@ async function handlePondSubmit(e) {
   if (idx >= 0) ponds[idx].firestoreId = canonicalFirestoreId;
 
   try {
-    if (typeof db === 'undefined' || !db) throw new Error('Firebase is not connected.');
+    requireFirebaseConnection();
     await db.collection('ponds').doc(canonicalFirestoreId).set(pond, { merge: true });
     const oldFirestoreId = String(previousPond?.firestoreId || '').trim();
     if (oldFirestoreId && oldFirestoreId !== canonicalFirestoreId) {
       await db.collection('ponds').doc(oldFirestoreId).delete();
     }
+    setFirebaseStatus('connected');
+    notifyFirebaseSave(true, 'Pond');
   } catch (err) {
     console.error('Firestore pond write error:', err);
-    bcAlert('Pond could not be saved to Firebase. Local data was not changed.');
+    setFirebaseStatus('disconnected');
+    notifyFirebaseSave(false, 'Pond', err);
     return;
   }
 
@@ -11898,7 +12122,7 @@ window.editPond = editPond;
 window.promptDeletePond = promptDeletePond;
 
 async function deletePondFromFirebaseCascade(pondId, pondName, pondRecord) {
-  if (!db) return;
+  requireFirebaseConnection();
   const idKey = String(pondId ?? '').trim().toLowerCase();
   const nameKey = String(pondName ?? '').trim().toLowerCase();
   const collections = ['sampling', 'treatments', 'harvests'];
@@ -12644,6 +12868,8 @@ function saveFeedAdjustment() {
     entries.push({
       id: `fcc_${Date.now()}_${entries.length}`,
       crop,
+      year: activeCycle.year,
+      cycleId: activeCycle.id,
       code: row.code,
       company: row.company,
       physicalKg,
@@ -12661,8 +12887,7 @@ function saveFeedAdjustment() {
   });
   if (!entries.length) { bcAlert('Enter physical closing stock for at least one feed code.'); return false; }
 
-  if (isCorrection) {
-    const corrections = entries.map(entry => {
+  const corrections = isCorrection ? entries.map(entry => {
       const previous = previousMap[String(entry.code).trim().toLowerCase()];
       return {
         id: `fccr_${Date.now()}_${entry.code}`,
@@ -12676,19 +12901,28 @@ function saveFeedAdjustment() {
         correctionKg: entry.physicalKg - (previous ? Number(previous.physicalKg || 0) : 0),
         date: entry.date
       };
-    });
-    feedCropClosingAdjustmentHistory.push(...corrections);
-  }
+    }) : [];
 
-  feedCropClosingAdjustments = feedCropClosingAdjustments.filter(a => cycleIdFor(a.year || getRecordYear(a) || activeCycle.year, a.crop || 'Crop 1') !== activeCycle.id);
-  feedCropClosingAdjustments.push(...entries);
-  localStorage.setItem('bluecrest_feed_crop_closing_adjustments', JSON.stringify(feedCropClosingAdjustments));
-  localStorage.setItem('bluecrest_feed_crop_closing_adjustment_history', JSON.stringify(feedCropClosingAdjustmentHistory));
-  saveStorage();
-  renderInventoryAndPurchases();
-  document.getElementById('feedAdjustmentModal')?.close();
-  bcAlert(isCorrection ? `${crop} closing feed correction saved successfully.` : `${crop} closing feed reconciliation saved successfully.`);
-  return true;
+  return (async () => {
+    try {
+      await firebaseFirstBatchWrite('feedCropClosingAdjustments', entries);
+      if (corrections.length) {
+        await firebaseFirstBatchWrite('feedCropClosingAdjustmentHistory', corrections, { silent: true });
+      }
+    } catch (err) {
+      console.error('Feed closing Firebase save failed:', err);
+      return false;
+    }
+    if (corrections.length) feedCropClosingAdjustmentHistory.push(...corrections);
+    feedCropClosingAdjustments = feedCropClosingAdjustments.filter(a => cycleIdFor(a.year || getRecordYear(a) || activeCycle.year, a.crop || 'Crop 1') !== activeCycle.id);
+    feedCropClosingAdjustments.push(...entries);
+    localStorage.setItem('bluecrest_feed_crop_closing_adjustments', JSON.stringify(feedCropClosingAdjustments));
+    localStorage.setItem('bluecrest_feed_crop_closing_adjustment_history', JSON.stringify(feedCropClosingAdjustmentHistory));
+    saveStorage();
+    renderInventoryAndPurchases();
+    document.getElementById('feedAdjustmentModal')?.close();
+    return true;
+  })();
 }
 
 function getFeedInventoryRows(inventoryList) {
@@ -14697,7 +14931,7 @@ async function deleteFeedRecord(id) {
   );
   const firestoreId = String(existing?.firestoreId || existing?.id || id);
   try {
-    if (db) await db.collection('feeds').doc(firestoreId).delete();
+    await firebaseFirstDelete('feeds', firestoreId);
     feedEntries = feedEntries.filter(e =>
       String(e.id) !== String(id) &&
       String(e.firestoreId || '') !== String(id) &&
@@ -14710,7 +14944,6 @@ async function deleteFeedRecord(id) {
     renderAll();
   } catch (err) {
     console.error('Firestore feed delete error:', err);
-    bcAlert('Feed record could not be deleted. Please try again.');
   }
 }
 
@@ -15087,10 +15320,14 @@ function editStockTransfer(id) {
   if (!r) return;
   openStockTransferModal(id);
 }
-function deleteStockTransfer(id) {
+async function deleteStockTransfer(id) {
   if(!confirm('Delete this stock transfer?')) return;
-  if(db) db.collection('stockTransfers').doc(String(id)).delete().catch(err=>console.error('Firestore stock transfer delete error:',err));
-  stockTransfers=stockTransfers.filter(x=>String(x.id)!==String(id)); saveStorage(); renderAll();
+  try {
+    await firebaseFirstDelete('stockTransfers', String(id));
+    stockTransfers=stockTransfers.filter(x=>String(x.id)!==String(id)); saveStorage(); renderAll();
+  } catch (err) {
+    console.error('Firestore stock transfer delete error:', err);
+  }
 }
 
 
@@ -16350,8 +16587,10 @@ async function submitHarvestFormDirectly() {
   };
 
   try {
-    if (typeof db === 'undefined' || !db) throw new Error('Firebase is not connected.');
+    requireFirebaseConnection();
     await db.collection('harvests').doc(newHarvest.id).set(newHarvest, { merge: true });
+    setFirebaseStatus('connected');
+    notifyFirebaseSave(true, 'Harvest');
     const existingIndex = harvests.findIndex(h => String(h.id) === String(newHarvest.id));
     if (existingIndex >= 0) harvests[existingIndex] = { ...harvests[existingIndex], ...newHarvest };
     else harvests.push(newHarvest);
@@ -16383,7 +16622,8 @@ async function submitHarvestFormDirectly() {
     renderAll();
   } catch (err) {
     console.error('Firestore harvest write error:', err);
-    bcAlert('Harvest could not be saved to cloud data. Please try again.');
+    setFirebaseStatus('disconnected');
+    notifyFirebaseSave(false, 'Harvest', err);
   }
 }
 
@@ -17019,7 +17259,18 @@ document.addEventListener('DOMContentLoaded', () => {
     return arr.some(h=>harvestCycleId(h)===pcid && pondIdOf(h).toLowerCase()===String(p.id).toLowerCase() && ['full','final harvest'].includes(String(h.type||h.harvestType||'').trim().toLowerCase()));
   }
   function fullHarvestIsSupersededByReactivation(p,cid,h){ const lock=effectivePondLock(cid,p.id); return !!(lock&&lock.closed===false&&lock.reactivatedAt); }
-  async function cloudSet(col,id,data){ if(typeof db!=='undefined'&&db) await db.collection(col).doc(String(id)).set(data,{merge:true}); }
+  async function cloudSet(col,id,data){
+    try {
+      requireFirebaseConnection();
+      await db.collection(col).doc(String(id)).set(data,{merge:true});
+      setFirebaseStatus('connected');
+      notifyFirebaseSave(true, firebaseCollectionLabel(col));
+    } catch (err) {
+      setFirebaseStatus('disconnected');
+      notifyFirebaseSave(false, firebaseCollectionLabel(col), err);
+      throw err;
+    }
+  }
   function bcEsc(v){ return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;').replace(/'/g,'&#39;'); }
   function bcAuditDate(v){
     if(!v) return '—';
@@ -17856,12 +18107,18 @@ document.addEventListener('DOMContentLoaded', initHarvestDecision);
     document.body.appendChild(host);
     return host;
   }
-  window.bcNotify=function(message){
+  window.bcNotify=function(message, type){
     const item=document.createElement('div');
     item.textContent=String(message ?? '');
-    item.style.cssText='padding:11px 16px;border:1px solid #dbe5ef;border-radius:12px;background:#fff;color:#1e293b;box-shadow:0 10px 28px rgba(15,23,42,.16);font:600 14px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif';
+    const ok = type === 'success';
+    const fail = type === 'error';
+    item.style.cssText = ok
+      ? 'padding:11px 16px;border:1px solid #bbf7d0;border-radius:12px;background:#f0fdf4;color:#166534;box-shadow:0 10px 28px rgba(15,23,42,.16);font:600 14px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif'
+      : fail
+      ? 'padding:11px 16px;border:1px solid #fecaca;border-radius:12px;background:#fef2f2;color:#991b1b;box-shadow:0 10px 28px rgba(15,23,42,.16);font:600 14px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif'
+      : 'padding:11px 16px;border:1px solid #dbe5ef;border-radius:12px;background:#fff;color:#1e293b;box-shadow:0 10px 28px rgba(15,23,42,.16);font:600 14px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif';
     ensureHost().appendChild(item);
-    setTimeout(()=>item.remove(),4200);
+    setTimeout(()=>item.remove(),5200);
   };
   window.bcAlert=window.bcNotify;
 })();
