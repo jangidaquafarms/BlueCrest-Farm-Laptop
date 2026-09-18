@@ -7267,20 +7267,31 @@ function getPurchaseYear(p) {
   const d = String(p?.date || p?.purchaseDate || '');
   const m = d.match(/(20\d{2})/);
   if (m) return Number(m[1]);
-  const activeYear = Number(activeCycle?.year || 0);
-  return activeYear >= 2000 ? activeYear : 0;
+  const cid = String(p?.cycleId || '');
+  const cy = cid.match(/(20\d{2})/);
+  if (cy) return Number(cy[1]);
+  return 0;
 }
 function getPurchaseCrop(p) {
-  return pondwiseNormaliseCrop(p?.crop || p?.cropCycle || activeCycle?.crop || 'Crop 1');
+  const explicit = String(p?.crop || p?.cropCycle || '').trim();
+  if (explicit) return pondwiseNormaliseCrop(explicit);
+  const cid = String(p?.cycleId || '').toLowerCase();
+  if (cid.includes('crop 2') || cid.includes('crop2') || cid.endsWith('|c2')) return 'Crop 2';
+  if (cid.includes('crop 1') || cid.includes('crop1') || cid.endsWith('|c1')) return 'Crop 1';
+  // Untagged legacy bills belong to Crop 1. Never inherit the crop currently
+  // selected in the top bar, or Crop 2 would show Crop 1 purchases.
+  return 'Crop 1';
 }
 function getActivePurchases() {
   const cycleYear = Number(activeCycle?.year || new Date().getFullYear());
   const cycleCrop = pondwiseNormaliseCrop(activeCycle?.crop || 'Crop 1');
+  const expectedId = String(typeof cycleIdFor === 'function' ? cycleIdFor(cycleYear, cycleCrop) : `${cycleYear}|${String(cycleCrop).toLowerCase()}`).toLowerCase();
   const list = Array.isArray(purchases) ? purchases : [];
-  const matched = list.filter(p => getPurchaseYear(p) === cycleYear && getPurchaseCrop(p) === cycleCrop);
-  if (matched.length) return matched;
-  // Recovery: bills exist but year was stored wrong/missing. Keep crop match so history does not go blank.
-  return list.filter(p => getPurchaseCrop(p) === cycleCrop);
+  return list.filter(p => {
+    const cid = String(p?.cycleId || '').trim().toLowerCase();
+    if (cid) return cid === expectedId;
+    return getPurchaseYear(p) === cycleYear && getPurchaseCrop(p) === cycleCrop;
+  });
 }
 function getActiveStockReturns() { return stockReturns.filter(isRecordInActiveCycle); }
 function getActiveVendorTransactions() { return vendorTransactions.filter(isRecordInActiveCycle); }
