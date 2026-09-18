@@ -5482,6 +5482,7 @@ body.bc-return-modal-open{overflow:hidden!important}
               <button id="crop-closing-stock-entry-btn" type="button" class="closing-stock-button" onclick="openActiveCropClosingPackedStockModal()">+ Add Closing Inventory</button>
               <button id="physical-settlement-btn" type="button" class="closing-stock-button" onclick="openPhysicalInventorySettlementModal()">⚖ Physical Settlement</button>
               <button id="crop-closing-stock-view-btn" type="button" class="closing-stock-button" onclick="openCropClosingStockViewModal()">View Closing Inventory</button>
+              <button id="clear-active-crop-inventory-btn" type="button" class="closing-stock-button" style="color:#b91c1c;border-color:rgba(185,28,28,.28);" onclick="clearActiveCropInventory()">Clear this crop's inventory</button>
             </div>
           </div>
 
@@ -7870,19 +7871,90 @@ async function firebaseFirstDelete(collectionName, firestoreId, options = {}) {
   }
 }
 
-async function deletePurchaseDocsFromCloud(list) {
+async function deleteDocsFromCloud(collectionName, list) {
   const ids = [...new Set((Array.isArray(list) ? list : []).map(p => String(p?.firestoreId || p?.id || '').trim()).filter(Boolean))];
   if (!ids.length || typeof db === 'undefined' || !db) return;
   try {
     requireFirebaseConnection();
     for (let i = 0; i < ids.length; i += 400) {
       const batch = db.batch();
-      ids.slice(i, i + 400).forEach(id => batch.delete(db.collection('purchases').doc(id)));
+      ids.slice(i, i + 400).forEach(id => batch.delete(db.collection(collectionName).doc(id)));
       await batch.commit();
     }
     setFirebaseStatus('connected');
   } catch (err) {
-    console.warn('Could not delete replaced purchase bills from Cloud:', err);
+    console.warn(`Could not delete ${collectionName} records from Cloud:`, err);
+  }
+}
+
+async function deletePurchaseDocsFromCloud(list) {
+  return deleteDocsFromCloud('purchases', list);
+}
+
+async function clearActiveCropInventory() {
+  const cycleYear = Number(activeCycle?.year || new Date().getFullYear());
+  const cycleCrop = pondwiseNormaliseCrop(activeCycle?.crop || 'Crop 1');
+  const cycleId = String(activeCycle?.id || (typeof cycleIdFor === 'function' ? cycleIdFor(cycleYear, cycleCrop) : ''));
+  const ok = confirm(
+    `Delete the inventory currently showing for ${cycleYear} • ${cycleCrop}?\n\nThis removes this crop's purchase bills, vendor returns, physical counts, feed counted stock and closing inventory.\n\nIt does NOT delete ponds, Feed Entry, treatments, other crops, or the product catalogue.\n\nAfter this, Inventory will be empty until you import or record real purchases.`
+  );
+  if (!ok) return;
+  try {
+    const purchasesToRemove = typeof getActivePurchases === 'function' ? getActivePurchases() : [];
+    const returnsToRemove = typeof getActiveStockReturns === 'function' ? getActiveStockReturns() : [];
+    const purchaseIds = new Set(purchasesToRemove.map(p => String(p?.id || p?.firestoreId || '')).filter(Boolean));
+    const returnIds = new Set(returnsToRemove.map(r => String(r?.id || r?.firestoreId || '')).filter(Boolean));
+    purchases = (Array.isArray(purchases) ? purchases : []).filter(p => {
+      const id = String(p?.id || p?.firestoreId || '');
+      if (id && purchaseIds.has(id)) return false;
+      return !(typeof getPurchaseYear === 'function' && typeof getPurchaseCrop === 'function' && getPurchaseYear(p) === cycleYear && getPurchaseCrop(p) === cycleCrop);
+    });
+    stockReturns = (Array.isArray(stockReturns) ? stockReturns : []).filter(r => {
+      const id = String(r?.id || r?.firestoreId || '');
+      if (id && returnIds.has(id)) return false;
+      return typeof isRecordInActiveCycle === 'function' ? !isRecordInActiveCycle(r) : true;
+    });
+
+    const c1All = typeof getCrop1ClosingPackedStockEntries === 'function' ? getCrop1ClosingPackedStockEntries() : [];
+    const c2All = typeof getCrop2ClosingPackedStockEntries === 'function' ? getCrop2ClosingPackedStockEntries() : [];
+    const c1Remove = c1All.filter(e => String(e.cycleId || '') === cycleId);
+    const c2Remove = c2All.filter(e => String(e.cycleId || '') === cycleId);
+    const c1Keep = c1All.filter(e => String(e.cycleId || '') !== cycleId);
+    const c2Keep = c2All.filter(e => String(e.cycleId || '') !== cycleId);
+    localStorage.setItem(STORAGE_KEYS.CROP1_CLOSING_PACKED_STOCK, JSON.stringify(c1Keep));
+    localStorage.setItem(STORAGE_KEYS.CROP2_CLOSING_PACKED_STOCK, JSON.stringify(c2Keep));
+
+    const settlementsAll = typeof getPhysicalInventorySettlements === 'function' ? getPhysicalInventorySettlements() : [];
+    const settlementsRemove = settlementsAll.filter(r => String(r.cycleId || '') === cycleId);
+    const settlementsKeep = settlementsAll.filter(r => String(r.cycleId || '') !== cycleId);
+    localStorage.setItem(STORAGE_KEYS.PHYSICAL_INVENTORY_SETTLEMENTS, JSON.stringify(settlementsKeep));
+
+    const prefix = `${cycleId}|`;
+    if (feedPhysicalStock && typeof feedPhysicalStock === 'object') {
+      Object.keys(feedPhysicalStock).forEach(key => {
+        if (String(key).startsWith(prefix)) delete feedPhysicalStock[key];
+      });
+    }
+    feedStockAdjustments = (Array.isArray(feedStockAdjustments) ? feedStockAdjustments : []).filter(a => getRecordCycleId(a) !== cycleId);
+    const feedCloseRemove = (Array.isArray(feedCropClosingAdjustments) ? feedCropClosingAdjustments : []).filter(a => cycleIdFor(a.year || getRecordYear(a) || cycleYear, a.crop || 'Crop 1') === cycleId);
+    feedCropClosingAdjustments = (Array.isArray(feedCropClosingAdjustments) ? feedCropClosingAdjustments : []).filter(a => cycleIdFor(a.year || getRecordYear(a) || cycleYear, a.crop || 'Crop 1') !== cycleId);
+
+    await deleteDocsFromCloud('purchases', purchasesToRemove);
+    await deleteDocsFromCloud('stockReturns', returnsToRemove);
+    await deleteDocsFromCloud('crop1ClosingPackedStock', c1Remove);
+    await deleteDocsFromCloud('crop2ClosingPackedStock', c2Remove);
+    await deleteDocsFromCloud('physicalInventorySettlements', settlementsRemove);
+    await deleteDocsFromCloud('feedCropClosingAdjustments', feedCloseRemove);
+
+    saveStorage();
+    if (typeof renderInventoryAndPurchases === 'function') renderInventoryAndPurchases();
+    if (typeof renderAll === 'function') {
+      try { renderAll(); } catch (renderErr) { console.warn('Inventory cleared; dashboard refresh had an error:', renderErr); }
+    }
+    bcAlert(`Inventory figures for ${cycleYear} • ${cycleCrop} were deleted.\n\nPonds, Feed Entry and treatments were not deleted.\nImport the real purchase CSV next so Inventory qty is calculated from those bills.`);
+  } catch (err) {
+    console.error('Clear inventory error:', err);
+    bcAlert(`Could not clear inventory: ${err.message || err}`);
   }
 }
 
@@ -9651,15 +9723,52 @@ function setupSupplierAutocomplete() {
 }
 
 function promptDeleteCatalogueProduct(prodName) {
-  if (!confirm(`Are you sure you want to completely remove "${prodName}" from the catalogue and live inventory?`)) return;
+  const cycleLabel = `${activeCycle?.year || ''} • ${activeCycle?.crop || ''}`.trim();
+  if (!confirm(`Remove "${prodName}" from ${cycleLabel} inventory?\n\nThis deletes this crop's purchase bills, vendor returns and counted stock for this product only.\nFeed Entry, treatments, other crops and the product name in the catalogue stay.`)) return;
 
-  masterCatalogue = masterCatalogue.filter(item => item.name.toLowerCase() !== prodName.toLowerCase());
-  purchases = purchases.filter(p => p.name.toLowerCase() !== prodName.toLowerCase());
-  stockReturns = stockReturns.filter(r => r.name.toLowerCase() !== prodName.toLowerCase());
+  const key = String(prodName || '').trim().toLowerCase();
+  const cycleId = String(activeCycle?.id || '');
+  const toRemovePurchases = (Array.isArray(purchases) ? purchases : []).filter(p =>
+    String(p.name || '').trim().toLowerCase() === key &&
+    (typeof getActivePurchases === 'function' ? getActivePurchases().some(a => String(a.id || a.firestoreId) === String(p.id || p.firestoreId)) : true)
+  );
+  const toRemoveReturns = (Array.isArray(stockReturns) ? stockReturns : []).filter(r =>
+    String(r.name || '').trim().toLowerCase() === key &&
+    (typeof isRecordInActiveCycle === 'function' ? isRecordInActiveCycle(r) : true)
+  );
+  purchases = (Array.isArray(purchases) ? purchases : []).filter(p => !toRemovePurchases.some(x => String(x.id || x.firestoreId) === String(p.id || p.firestoreId)));
+  stockReturns = (Array.isArray(stockReturns) ? stockReturns : []).filter(r => !toRemoveReturns.some(x => String(x.id || x.firestoreId) === String(r.id || r.firestoreId)));
 
-  saveStorage();
-  renderAll();
-  bcAlert(`"${prodName}" has been removed from your catalogue.`);
+  const prefix = `${cycleId}|${key}`;
+  if (feedPhysicalStock && Object.prototype.hasOwnProperty.call(feedPhysicalStock, prefix)) delete feedPhysicalStock[prefix];
+  feedStockAdjustments = (Array.isArray(feedStockAdjustments) ? feedStockAdjustments : []).filter(a =>
+    !(getRecordCycleId(a) === cycleId && String(a.code || a.name || '').trim().toLowerCase() === key)
+  );
+  feedCropClosingAdjustments = (Array.isArray(feedCropClosingAdjustments) ? feedCropClosingAdjustments : []).filter(a =>
+    !(cycleIdFor(a.year || getRecordYear(a) || activeCycle.year, a.crop || 'Crop 1') === cycleId && String(a.code || a.name || '').trim().toLowerCase() === key)
+  );
+
+  const c1All = getCrop1ClosingPackedStockEntries();
+  const c1Remove = c1All.filter(e => String(e.cycleId || '') === cycleId && String(e.name || '').trim().toLowerCase() === key);
+  localStorage.setItem(STORAGE_KEYS.CROP1_CLOSING_PACKED_STOCK, JSON.stringify(c1All.filter(e => !c1Remove.includes(e))));
+  const c2All = getCrop2ClosingPackedStockEntries();
+  const c2Remove = c2All.filter(e => String(e.cycleId || '') === cycleId && String(e.name || '').trim().toLowerCase() === key);
+  localStorage.setItem(STORAGE_KEYS.CROP2_CLOSING_PACKED_STOCK, JSON.stringify(c2All.filter(e => !c2Remove.includes(e))));
+  const settlementsAll = getPhysicalInventorySettlements();
+  const settlementsRemove = settlementsAll.filter(r => String(r.cycleId || '') === cycleId && String(r.name || r.productName || '').trim().toLowerCase() === key);
+  localStorage.setItem(STORAGE_KEYS.PHYSICAL_INVENTORY_SETTLEMENTS, JSON.stringify(settlementsAll.filter(r => !settlementsRemove.includes(r))));
+
+  Promise.all([
+    deleteDocsFromCloud('purchases', toRemovePurchases),
+    deleteDocsFromCloud('stockReturns', toRemoveReturns),
+    deleteDocsFromCloud('crop1ClosingPackedStock', c1Remove),
+    deleteDocsFromCloud('crop2ClosingPackedStock', c2Remove),
+    deleteDocsFromCloud('physicalInventorySettlements', settlementsRemove)
+  ]).finally(() => {
+    saveStorage();
+    renderAll();
+    bcAlert(`"${prodName}" was removed from ${cycleLabel} inventory.`);
+  });
 }
 
 function editCatalogueProduct(oldName) {
@@ -13253,7 +13362,7 @@ function getFeedInventoryRows(inventoryList) {
       fifoShortageValue: fifoClosing?.ok ? Number(fifoClosing.adjustmentValue || 0) : 0,
       closingCrop: latestClosing ? latestClosing.crop : null
     };
-  }).filter(feed => feed.purchasedQty !== 0 || feed.usedQty !== 0 || feed.closingBalance !== 0 || feed.physicalStockKg != null);
+  }).filter(feed => feed.purchasedQty !== 0 || feed.physicalStockKg != null);
 }
 
 
@@ -13458,8 +13567,8 @@ function getPositiveInventoryDisplayItems() {
   // Fertilizer + Medicine use the normal product inventory calculation.
   const nonFeedItems = baseInventory.filter(item =>
     item.category !== 'Feed' && (
-      Math.abs(Number(item.balanceStock || 0)) > 0.000001 ||
-      (isFeedSupplementProduct(item.name) && Number(item.totalUsedQty || 0) > 0.000001)
+      Math.abs(Number(item.openingStockQty || 0)) > 0.000001 ||
+      Math.abs(Number(item.totalPurchasedQty || 0)) > 0.000001
     )
   );
 
@@ -13468,7 +13577,10 @@ function getPositiveInventoryDisplayItems() {
   // value historical feed consumption or remaining system stock.
   const feedRows = getFeedInventoryRows(baseInventory);
   const feedItems = feedRows
-    .filter(row => Math.abs(Number(row.systemStockKg || 0)) > 0.000001)
+    .filter(row =>
+      Math.abs(Number(row.purchasedQty || 0)) > 0.000001 ||
+      Math.abs(Number(row.physicalStockKg || 0)) > 0.000001
+    )
     .map(row => {
       const codeKey = String(row.code || '').trim().toLowerCase();
       const baseItem = baseInventory.find(item =>
@@ -13562,7 +13674,7 @@ function renderInventoryAndPurchases() {
   };
 
   const inventoryForDisplayBase = isFeedInventoryOnly
-    ? inventoryList.filter(item => item.category === 'Feed' && Math.abs(Number(item.balanceStock || 0)) > 0.000001)
+    ? inventoryList.filter(item => item.category === 'Feed' && Math.abs(Number(item.totalPurchasedQty || 0)) > 0.000001)
     : nonZeroInventory.filter(matchesInventoryFilter);
 
   // The inventory search is a display selection, so the KPI cards must use the
