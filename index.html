@@ -6117,11 +6117,19 @@ function startBlueCrestApp() {
     if (blueCrestAppStarted) return;
     blueCrestAppStarted = true;
     loadAndEnsureData();
-    setupGlobalCycleContext();
-    renderGlobalCycleSelector();
-    setupEventListeners();
-    renderAll();
-    autoPopulateLastFeed();
+    const afterCloud = () => {
+      persistAllLocalNow();
+      scheduleFarmCloudBackup();
+      setupGlobalCycleContext();
+      renderGlobalCycleSelector();
+      setupEventListeners();
+      renderAll();
+      autoPopulateLastFeed();
+    };
+    pullFarmFromCloud().then(afterCloud).catch(err => {
+      console.warn('Cloud farm restore skipped:', err);
+      afterCloud();
+    });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -7653,7 +7661,8 @@ function loadAndEnsureData() {
   ponds = dedupePondsByCycleAndName(ponds);
   if (!samples || samples.length === 0) samples = [...defaultSamples];
   if (!harvests || harvests.length === 0) harvests = [...defaultHarvests];
-  if (!purchases || purchases.length === 0) purchases = [...defaultPurchases];
+  // Do not seed demo purchases. An empty purchase list must be able to
+  // restore from the shared Firebase farm backup instead.
   if (!stockReturns || stockReturns.length === 0) stockReturns = [...defaultStockReturns];
   if (!treatments || treatments.length === 0) treatments = [...defaultTreatments];
   if (!vendorTransactions || vendorTransactions.length === 0) vendorTransactions = [...defaultVendorTransactions];
@@ -7695,14 +7704,147 @@ async function firebaseFirstBatchWrite(collectionName, records) {
   await batch.commit();
 }
 
-function saveStorage() {
-  // Firestore is authoritative for these large operational collections and
-  // their listeners already refresh the local cache. Do not stringify them
-  // on every unrelated save; this keeps Purchase History from repeatedly
-  // serializing the entire farm history and avoids unnecessary UI stalls.
+function isNonEmptyFarmList(value) {
+  return Array.isArray(value) && value.length > 0;
+}
+
+function getFarmBackupSlices() {
+  return {
+    purchases,
+    ponds,
+    feedEntries,
+    samples,
+    harvests,
+    treatments,
+    stockReturns,
+    stockTransfers,
+    vendorTransactions,
+    vendors,
+    ledgerEntries,
+    farmCycles,
+    activeCycle,
+    masterCatalogue,
+    customLedgerSubcategories,
+    customLedgerAccounts,
+    feedPhysicalStock,
+    feedMinStockKg,
+    feedStockAdjustments,
+    feedCropClosingAdjustments,
+    feedCropClosingAdjustmentHistory,
+    productMemory: typeof productMemory !== 'undefined' ? productMemory : {}
+  };
+}
+
+function applyFarmBackupSlice(name, incoming) {
+  if (incoming == null) return false;
+  if (name === 'purchases' && isNonEmptyFarmList(incoming)) {
+    if (isNonEmptyFarmList(purchases)) {
+      purchases = mergePurchasesPreservingLocal(purchases, incoming);
+    } else {
+      purchases = incoming.map((p, i) => normalisePurchaseRecord(p, i));
+    }
+    return true;
+  }
+  const assignList = (current, next) => {
+    if (!isNonEmptyFarmList(next)) return current;
+    if (isNonEmptyFarmList(current)) return current;
+    return next;
+  };
+  if (name === 'ponds') { const next = assignList(ponds, incoming); if (next !== ponds) { ponds = dedupePondsByCycleAndName(next); return true; } return false; }
+  if (name === 'feedEntries') { const next = assignList(feedEntries, incoming); if (next !== feedEntries) { feedEntries = next; return true; } return false; }
+  if (name === 'samples') { const next = assignList(samples, incoming); if (next !== samples) { samples = next; return true; } return false; }
+  if (name === 'harvests') { const next = assignList(harvests, incoming); if (next !== harvests) { harvests = next; return true; } return false; }
+  if (name === 'treatments') { const next = assignList(treatments, incoming); if (next !== treatments) { treatments = next; return true; } return false; }
+  if (name === 'stockReturns') { const next = assignList(stockReturns, incoming); if (next !== stockReturns) { stockReturns = next; return true; } return false; }
+  if (name === 'stockTransfers') { const next = assignList(stockTransfers, incoming); if (next !== stockTransfers) { stockTransfers = next; return true; } return false; }
+  if (name === 'vendorTransactions') { const next = assignList(vendorTransactions, incoming); if (next !== vendorTransactions) { vendorTransactions = next; return true; } return false; }
+  if (name === 'vendors') { const next = assignList(vendors, incoming); if (next !== vendors) { vendors = next; return true; } return false; }
+  if (name === 'ledgerEntries') { const next = assignList(ledgerEntries, incoming); if (next !== ledgerEntries) { ledgerEntries = next; return true; } return false; }
+  if (name === 'farmCycles') { const next = assignList(farmCycles, incoming); if (next !== farmCycles) { farmCycles = next; return true; } return false; }
+  if (name === 'masterCatalogue') { const next = assignList(masterCatalogue, incoming); if (next !== masterCatalogue) { masterCatalogue = next; return true; } return false; }
+  if (name === 'customLedgerSubcategories') { const next = assignList(customLedgerSubcategories, incoming); if (next !== customLedgerSubcategories) { customLedgerSubcategories = next; return true; } return false; }
+  if (name === 'customLedgerAccounts') { const next = assignList(customLedgerAccounts, incoming); if (next !== customLedgerAccounts) { customLedgerAccounts = next; return true; } return false; }
+  if (name === 'feedCropClosingAdjustments') { const next = assignList(feedCropClosingAdjustments, incoming); if (next !== feedCropClosingAdjustments) { feedCropClosingAdjustments = next; return true; } return false; }
+  if (name === 'feedCropClosingAdjustmentHistory') { const next = assignList(feedCropClosingAdjustmentHistory, incoming); if (next !== feedCropClosingAdjustmentHistory) { feedCropClosingAdjustmentHistory = next; return true; } return false; }
+  if (name === 'activeCycle' && incoming && incoming.year && incoming.crop && !(activeCycle && activeCycle.year && farmCycles.length)) {
+    activeCycle = incoming;
+    return true;
+  }
+  if (name === 'feedPhysicalStock' && incoming && typeof incoming === 'object' && !Array.isArray(incoming) && (!feedPhysicalStock || !Object.keys(feedPhysicalStock).length)) {
+    feedPhysicalStock = incoming;
+    return true;
+  }
+  if (name === 'feedMinStockKg' && incoming && typeof incoming === 'object' && !Array.isArray(incoming) && (!feedMinStockKg || !Object.keys(feedMinStockKg).length)) {
+    feedMinStockKg = incoming;
+    return true;
+  }
+  if (name === 'feedStockAdjustments' && isNonEmptyFarmList(incoming) && !isNonEmptyFarmList(feedStockAdjustments)) {
+    feedStockAdjustments = incoming;
+    return true;
+  }
+  if (name === 'productMemory' && incoming && typeof incoming === 'object' && typeof productMemory !== 'undefined' && (!productMemory || !Object.keys(productMemory).length)) {
+    productMemory = incoming;
+    return true;
+  }
+  return false;
+}
+
+async function pullFarmFromCloud() {
+  if (typeof db === 'undefined' || !db) return false;
+  const snap = await db.collection('farmBackup').get();
+  if (snap.empty) return false;
+  let restored = false;
+  snap.docs.forEach(doc => {
+    const data = doc.data() || {};
+    const incoming = Object.prototype.hasOwnProperty.call(data, 'items') ? data.items : data;
+    if (applyFarmBackupSlice(doc.id, incoming)) restored = true;
+  });
+  return restored;
+}
+
+async function pushFarmToCloud() {
+  if (typeof db === 'undefined' || !db) return;
+  const slices = getFarmBackupSlices();
+  const writes = [];
+  Object.entries(slices).forEach(([name, value]) => {
+    const isList = Array.isArray(value);
+    const isObj = value && typeof value === 'object' && !isList;
+    const emptyList = isList && !value.length;
+    const emptyObj = isObj && !Object.keys(value).length;
+    if (emptyList || emptyObj) return;
+    writes.push({ name, value });
+  });
+  for (let i = 0; i < writes.length; i += 400) {
+    const batch = db.batch();
+    writes.slice(i, i + 400).forEach(({ name, value }) => {
+      batch.set(db.collection('farmBackup').doc(name), {
+        items: value,
+        updatedAt: new Date().toISOString(),
+        count: Array.isArray(value) ? value.length : undefined
+      }, { merge: true });
+    });
+    await batch.commit();
+  }
+}
+
+let farmBackupTimer = null;
+function scheduleFarmCloudBackup() {
+  clearTimeout(farmBackupTimer);
+  farmBackupTimer = setTimeout(() => {
+    pushFarmToCloud().catch(err => console.warn('Farm cloud backup failed:', err));
+  }, 1500);
+}
+
+function persistAllLocalNow() {
   const localCache = [
     [STORAGE_KEYS.PURCHASES, purchases],
+    [STORAGE_KEYS.PONDS, ponds],
+    [STORAGE_KEYS.FEEDS, feedEntries],
+    [STORAGE_KEYS.SAMPLES, samples],
+    [STORAGE_KEYS.HARVESTS, harvests],
+    [STORAGE_KEYS.TREATMENTS, treatments],
     [STORAGE_KEYS.STOCK_RETURNS, stockReturns],
+    [STORAGE_KEYS.STOCK_TRANSFERS, stockTransfers],
     [STORAGE_KEYS.VENDOR_TXNS, vendorTransactions],
     [STORAGE_KEYS.VENDORS, vendors],
     [STORAGE_KEYS.LEDGER_ENTRIES, ledgerEntries],
@@ -7712,14 +7854,25 @@ function saveStorage() {
     [STORAGE_KEYS.FEED_PHYSICAL_STOCK, feedPhysicalStock],
     [STORAGE_KEYS.FEED_MIN_STOCK, feedMinStockKg],
     [STORAGE_KEYS.FEED_ADJUSTMENTS, feedStockAdjustments],
+    [STORAGE_KEYS.FARM_CYCLES, farmCycles],
+    [STORAGE_KEYS.ACTIVE_CYCLE, activeCycle],
+    [STORAGE_KEYS.PRODUCT_MEMORY, typeof productMemory !== 'undefined' ? productMemory : {}],
     ['bluecrest_feed_crop_closing_adjustments', feedCropClosingAdjustments],
     ['bluecrest_feed_crop_closing_adjustment_history', feedCropClosingAdjustmentHistory]
   ];
   try {
-    localCache.forEach(([key, value]) => localStorage.setItem(key, JSON.stringify(value)));
+    localCache.forEach(([key, value]) => {
+      if (value === undefined) return;
+      localStorage.setItem(key, JSON.stringify(value));
+    });
   } catch (e) {
     console.warn('Local cache save skipped:', e);
   }
+}
+
+function saveStorage() {
+  persistAllLocalNow();
+  scheduleFarmCloudBackup();
 }
 
 function toggleNavGroup(groupId) {
