@@ -106,6 +106,12 @@ body.app-body {
 .pill-btn { border: none; border-radius: var(--radius-pill); font-size: 0.8125rem; font-weight: 700; padding: 0.45rem 1rem; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; }
 .status-green { background-color: var(--brand-green); color: #ffffff; }
 .status-dot { width: 7px; height: 7px; background-color: #86efac; border-radius: 50%; }
+.firebase-status-badge { cursor: default; font-size: 0.75rem; }
+.firebase-status-badge.is-checking { background: #64748b; color: #ffffff; }
+.firebase-status-badge.is-connected { background: var(--brand-green); color: #ffffff; }
+.firebase-status-badge.is-disconnected { background: var(--brand-red); color: #ffffff; }
+.firebase-status-badge.is-checking .status-dot,
+.firebase-status-badge.is-disconnected .status-dot { background: #ffffff; }
 .action-blue { background-color: var(--brand-blue); color: #ffffff; }
 .action-red { background-color: var(--brand-red); color: #ffffff; }
 .secondary-btn { background: #f1f5f9; color: #334155; border: 1px solid var(--border-subtle); }
@@ -4585,6 +4591,11 @@ body.bc-return-modal-open{overflow:hidden!important}
             <select id="globalCropSelect" aria-label="Active farm crop"></select>
             <button type="button" class="small-button" id="manageCyclesBtn">Manage</button>
           </div>
+          <button type="button" class="pill-btn firebase-status-badge is-checking" id="firebaseStatusBadge" title="Checking Firebase connection">
+            <span class="status-dot"></span>
+            <span id="firebaseStatusLabel">Cloud: checking</span>
+          </button>
+          <button type="button" class="pill-btn action-blue" id="uploadAllToFirebaseBtn" title="Upload the farm currently in this Chrome to Firebase">Save all to Firebase</button>
           <button type="button" class="pill-btn status-green" id="activeCycleBadge">
             <span class="status-dot"></span> Active Cycle
           </button>
@@ -5471,6 +5482,7 @@ body.bc-return-modal-open{overflow:hidden!important}
               <button id="crop-closing-stock-entry-btn" type="button" class="closing-stock-button" onclick="openActiveCropClosingPackedStockModal()">+ Add Closing Inventory</button>
               <button id="physical-settlement-btn" type="button" class="closing-stock-button" onclick="openPhysicalInventorySettlementModal()">⚖ Physical Settlement</button>
               <button id="crop-closing-stock-view-btn" type="button" class="closing-stock-button" onclick="openCropClosingStockViewModal()">View Closing Inventory</button>
+              <button id="clear-active-crop-inventory-btn" type="button" class="closing-stock-button" style="color:#b91c1c;border-color:rgba(185,28,28,.28);" onclick="clearActiveCropInventory()">Clear this crop's inventory</button>
             </div>
           </div>
 
@@ -5980,6 +5992,17 @@ document.addEventListener('click', function(e){ const m=document.getElementById(
     </form>
   </dialog>
 
+  <dialog id="purchaseCsvImportModeDialog" class="clinical-modal" style="width:min(640px,calc(100% - 2rem));">
+    <h3>Rebuild this crop from Purchase CSV?</h3>
+    <p id="purchaseCsvImportModeText" style="white-space:pre-wrap;"></p>
+    <p style="color:var(--text-muted);font-size:.85rem;">Do not erase Inventory. Qty is calculated from purchase bills minus usage and vendor returns. Feed Entry, treatments and closing stock stay as they are.</p>
+    <form method="dialog" class="modal-actions" style="flex-wrap:wrap;">
+      <button value="cancel" class="pill-btn secondary-btn">Cancel import</button>
+      <button value="add" class="pill-btn secondary-btn">Keep old bills and add CSV</button>
+      <button value="replace" class="pill-btn action-blue">Replace this crop's purchases</button>
+    </form>
+  </dialog>
+
   <dialog id="vendorStatementDialog" class="vendor-statement-dialog">
     <div class="statement-print-wrapper" id="statementPrintWrapper">
       <div class="statement-brand-header">
@@ -6110,18 +6133,121 @@ try {
     db = null;
 }
 
+let firebaseStatus = 'checking';
+
+function firebaseCollectionLabel(name) {
+    const map = {
+        ponds: 'Pond',
+        feeds: 'Feed record',
+        sampling: 'Sampling',
+        harvests: 'Harvest',
+        treatments: 'Treatment',
+        purchases: 'Purchase',
+        stockTransfers: 'Stock transfer',
+        stockReturns: 'Stock return',
+        vendorTransactions: 'Vendor payment',
+        ledgerEntries: 'Ledger entry',
+        farmCycles: 'Year & Crop',
+        pondLocks: 'Pond lock',
+        cropLocks: 'Crop lock',
+        lockAudit: 'Lock history',
+        feedCropClosingAdjustments: 'Feed closing stock',
+        feedCropClosingAdjustmentHistory: 'Feed closing history',
+        crop1ClosingPackedStock: 'Crop 1 closing stock',
+        crop2ClosingPackedStock: 'Crop 2 closing stock',
+        physicalInventorySettlements: 'Physical inventory',
+        laptopLocalCache: 'Farm cache',
+        appStatus: 'Cloud connection'
+    };
+    return map[name] || name;
+}
+
+function updateFirebaseStatusUI() {
+    const badge = document.getElementById('firebaseStatusBadge');
+    const label = document.getElementById('firebaseStatusLabel');
+    if (!badge || !label) return;
+    badge.classList.remove('is-checking', 'is-connected', 'is-disconnected');
+    if (firebaseStatus === 'connected') {
+        badge.classList.add('is-connected');
+        label.textContent = 'Cloud: connected';
+        badge.title = 'Firebase is connected. Saves go to the cloud first, then this computer.';
+    } else if (firebaseStatus === 'disconnected') {
+        badge.classList.add('is-disconnected');
+        label.textContent = 'Cloud: not connected';
+        badge.title = 'Firebase is not connected. Records are not saved until the cloud is available.';
+    } else {
+        badge.classList.add('is-checking');
+        label.textContent = 'Cloud: checking';
+        badge.title = 'Checking Firebase connection…';
+    }
+}
+
+function setFirebaseStatus(state) {
+    firebaseStatus = state;
+    updateFirebaseStatusUI();
+}
+
+function notifyFirebaseSave(ok, label, err) {
+    const detail = err && (err.message || String(err));
+    const message = ok
+        ? `${label} saved to Firebase`
+        : `${label} Firebase save failed${detail ? ': ' + detail : ''}`;
+    if (typeof window.bcNotify === 'function') window.bcNotify(message, ok ? 'success' : 'error');
+    else if (ok) console.log(message);
+    else console.error(message);
+}
+
+function notifyFirebaseDelete(ok, label, err) {
+    const detail = err && (err.message || String(err));
+    const message = ok
+        ? `${label} deleted from Firebase`
+        : `${label} Firebase delete failed${detail ? ': ' + detail : ''}`;
+    if (typeof window.bcNotify === 'function') window.bcNotify(message, ok ? 'success' : 'error');
+    else if (ok) console.log(message);
+    else console.error(message);
+}
+
+function requireFirebaseConnection() {
+    if (typeof db === 'undefined' || !db) {
+        setFirebaseStatus('disconnected');
+        throw new Error('Firebase is not connected. Open this page with internet access. Local data was not changed.');
+    }
+}
+
+async function probeFirebaseConnection() {
+    setFirebaseStatus('checking');
+    try {
+        requireFirebaseConnection();
+        await db.collection('ponds').limit(1).get();
+        setFirebaseStatus('connected');
+    } catch (err) {
+        console.error('Firebase connection probe failed:', err);
+        setFirebaseStatus('disconnected');
+        notifyFirebaseSave(false, 'Cloud connection', err);
+    }
+}
+
 // --- Firebase Authentication ---
 // Authentication is temporarily disabled as an access gate. Firebase Auth remains
 // initialized so it can be re-enabled later without changing the rest of the app.
 function startBlueCrestApp() {
     if (blueCrestAppStarted) return;
     blueCrestAppStarted = true;
+    probeFirebaseConnection();
     loadAndEnsureData();
-    setupGlobalCycleContext();
-    renderGlobalCycleSelector();
-    setupEventListeners();
-    renderAll();
-    autoPopulateLastFeed();
+    const afterCloud = () => {
+      persistAllLocalNow();
+      scheduleFarmCloudBackup();
+      setupGlobalCycleContext();
+      renderGlobalCycleSelector();
+      setupEventListeners();
+      renderAll();
+      autoPopulateLastFeed();
+    };
+    pullFarmFromCloud().then(afterCloud).catch(err => {
+      console.warn('Cloud farm restore skipped:', err);
+      afterCloud();
+    });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -6407,6 +6533,7 @@ let stockTransfers = [];
 let activeCycle = { year: 2026, crop: 'Crop 1', id: '2026|crop 1' };
 let deleteTargetId = null;
 let deleteTargetType = null;
+const suppressedPurchaseIds = new Set();
 let vendorPaymentOnlyMode = false;
 let editingVendorTxnId = null;
 
@@ -6762,7 +6889,6 @@ function saveProductMemoryEntry(name, company, price, category, unit) {
     category: category || productMemory[k]?.category || 'Fertilizer',
     unit: unit || productMemory[k]?.unit || 'Bag/Pkt'
   };
-  localStorage.setItem(STORAGE_KEYS.PRODUCT_MEMORY, JSON.stringify(productMemory));
 }
 
 function cycleIdFor(year, crop) {
@@ -6824,9 +6950,17 @@ function getCrop1ClosingCycle() {
     return { id: `${year}|crop 1`, year, crop: 'Crop 1' };
 }
 function getCrop1ClosingPackedStockEntries() { try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.CROP1_CLOSING_PACKED_STOCK) || '[]'); } catch(e) { return []; } }
-function saveCrop1ClosingPackedStockEntries(entries) { localStorage.setItem(STORAGE_KEYS.CROP1_CLOSING_PACKED_STOCK, JSON.stringify(entries)); }
+function saveCrop1ClosingPackedStockEntries(entries) {
+  const list = Array.isArray(entries) ? entries : [];
+  return firebaseFirstBatchWrite('crop1ClosingPackedStock', list, { label: 'Crop 1 closing stock' })
+    .then(() => localStorage.setItem(STORAGE_KEYS.CROP1_CLOSING_PACKED_STOCK, JSON.stringify(list)));
+}
 function getCrop2ClosingPackedStockEntries() { try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.CROP2_CLOSING_PACKED_STOCK) || '[]'); } catch(e) { return []; } }
-function saveCrop2ClosingPackedStockEntries(entries) { localStorage.setItem(STORAGE_KEYS.CROP2_CLOSING_PACKED_STOCK, JSON.stringify(entries)); }
+function saveCrop2ClosingPackedStockEntries(entries) {
+  const list = Array.isArray(entries) ? entries : [];
+  return firebaseFirstBatchWrite('crop2ClosingPackedStock', list, { label: 'Crop 2 closing stock' })
+    .then(() => localStorage.setItem(STORAGE_KEYS.CROP2_CLOSING_PACKED_STOCK, JSON.stringify(list)));
+}
 function getCrop2ClosingCycle() {
     const active = typeof getActiveCycle === 'function' ? getActiveCycle() : activeCycle;
     const year = Number(active?.year) || new Date().getFullYear();
@@ -6869,8 +7003,8 @@ function handleCrop2ClosingProductKeydown(e){ const input=e.currentTarget,dd=doc
 function updateCrop2ClosingProductPreview(){ const name=document.getElementById('crop2ClosingProduct')?.value||'',qty=Number(document.getElementById('crop2ClosingQty')?.value||0),pe=document.getElementById('crop2ClosingPrice'),ve=document.getElementById('crop2ClosingValue'),ie=document.getElementById('crop2ClosingProductInfo'); if(!name){if(pe)pe.value='';if(ve)ve.value='';if(ie)ie.textContent='Select a product to fetch its Crop 2 cost price.';return;} const x=getCrop2ClosingProductPrice(name);if(pe)pe.value=`₹${x.price.toLocaleString('en-IN',{maximumFractionDigits:2})} / ${x.unit}`;if(ve)ve.value=`₹${(qty*x.price).toLocaleString('en-IN',{maximumFractionDigits:2})}`;if(ie)ie.innerHTML=`${escapeHtml(x.source)}: <strong>₹${x.price.toLocaleString('en-IN',{maximumFractionDigits:2})}/${escapeHtml(x.unit)}</strong>${x.vendor?' • '+escapeHtml(x.vendor):''}`; }
 function openCrop2ClosingPackedStockModal(){ const m=document.getElementById('crop2ClosingPackedStockModal');if(!m)return;crop2ClosingEditingId=null;populateCrop2ClosingProductSelect();document.getElementById('crop2ClosingPackedStockForm')?.reset();const s=document.getElementById('crop2ClosingProduct');if(s)s.value='';const input=document.getElementById('crop2ClosingProductSearch'),dd=document.getElementById('crop2ClosingProductDropdown');if(input)input.value='';if(dd)dd.hidden=true;updateCrop2ClosingProductPreview();renderCrop2ClosingPackedStockSavedList();const submit=m.querySelector('button[type="submit"]');if(submit)submit.textContent='Save Closing Stock';m.showModal(); }
 function editCrop2ClosingPackedStock(id){ const entry=getCrop2ClosingPackedStockEntries().find(e=>String(e.id)===String(id));if(!entry){bcAlert('Closing inventory entry not found.');return;}crop2ClosingEditingId=String(entry.id);const m=document.getElementById('crop2ClosingPackedStockModal');if(!m)return;populateCrop2ClosingProductSelect();selectCrop2ClosingProduct(String(entry.name||''));const qtyEl=document.getElementById('crop2ClosingQty');if(qtyEl)qtyEl.value=Number(entry.qty)||0;updateCrop2ClosingProductPreview();renderCrop2ClosingPackedStockSavedList();const submit=m.querySelector('button[type="submit"]');if(submit)submit.textContent='Update Closing Stock';m.showModal(); }
-function deleteCrop2ClosingPackedStock(id){ if(!confirm('Delete this Crop 2 closing stock entry?'))return;saveCrop2ClosingPackedStockEntries(getCrop2ClosingPackedStockEntries().filter(e=>String(e.id)!==String(id)));crop2ClosingEditingId=null;renderCropClosingStockPanel();renderCrop2ClosingPackedStockSavedList();if(document.getElementById('cropClosingStockViewModal')?.open)openCropClosingStockViewModal(); }
-function saveCrop2ClosingPackedStock(event){ event.preventDefault();const name=document.getElementById('crop2ClosingProduct')?.value||'',qty=Number(document.getElementById('crop2ClosingQty')?.value||0);if(!name||!(qty>0)){bcAlert('Select a product and enter a closing quantity.');return;}const cycle=getCrop2ClosingCycle(),x=getCrop2ClosingProductPrice(name);if(!(x.price>0)){bcAlert('No cost price is available for this product. Record a Crop 2 purchase or ensure it came from Crop 1 opening stock first.');return;}const fifo=getFifoPhysicalClosingValuation(name,x.category||'Fertilizer',cycle.year,'Crop 2',qty,new Date().toISOString().slice(0,10),crop2ClosingEditingId);if(!fifo.ok){bcAlert(`${fifo.reason}${fifo.excessQty>0 ? ` Excess: ${fifo.excessQty.toLocaleString('en-IN',{maximumFractionDigits:3})} base units.` : ''}`);return;}if(!(fifo.closingValue>=0)||(qty>0&&!(fifo.closingRate>0))){bcAlert('FIFO closing valuation could not be calculated. Check purchases, returns and usage history.');return;}const entries=getCrop2ClosingPackedStockEntries();let idx=crop2ClosingEditingId?entries.findIndex(e=>String(e.id)===String(crop2ClosingEditingId)):-1;const key=name.trim().toLowerCase();const duplicateIdx=entries.findIndex(e=>e.cycleId===cycle.id&&String(e.name).trim().toLowerCase()===key&&(!crop2ClosingEditingId||String(e.id)!==String(crop2ClosingEditingId)));if(duplicateIdx>=0){bcAlert('A Crop 2 closing inventory entry for this product already exists. Edit that entry instead.');return;}const rec={id:idx>=0?entries[idx].id:`c2close-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,cycleId:cycle.id,year:cycle.year,crop:'Crop 2',name:name.trim(),company:x.vendor,category:x.category||'Fertilizer',unit:x.unit,qty,price:Number(fifo.closingRate||0),value:Number(fifo.closingValue||0),fifoClosingValue:Number(fifo.closingValue||0),fifoClosingRate:Number(fifo.closingRate||0),fifoTheoreticalQty:Number(fifo.theoreticalQty||0),fifoShortageQty:Number(fifo.shortageQty||0),fifoShortageValue:Number(fifo.adjustmentValue||0),fifoValuation:'FIFO physical closing',date:new Date().toISOString()};if(idx>=0)entries[idx]=rec;else entries.push(rec);saveCrop2ClosingPackedStockEntries(entries);const wasEditing=idx>=0;crop2ClosingEditingId=null;renderCropClosingStockPanel();renderCrop2ClosingPackedStockSavedList();document.getElementById('crop2ClosingQty').value='';updateCrop2ClosingProductPreview();const submit=document.getElementById('crop2ClosingPackedStockModal')?.querySelector('button[type="submit"]');if(submit)submit.textContent='Save Closing Stock';bcAlert(wasEditing?'Crop 2 closing stock updated.':'Crop 2 closing stock saved.'); }
+function deleteCrop2ClosingPackedStock(id){ if(!confirm('Delete this Crop 2 closing stock entry?'))return; const next=getCrop2ClosingPackedStockEntries().filter(e=>String(e.id)!==String(id)); firebaseFirstDelete('crop2ClosingPackedStock', String(id), {label:'Crop 2 closing stock'}).then(()=>{ localStorage.setItem(STORAGE_KEYS.CROP2_CLOSING_PACKED_STOCK, JSON.stringify(next)); crop2ClosingEditingId=null; renderCropClosingStockPanel(); renderCrop2ClosingPackedStockSavedList(); if(document.getElementById('cropClosingStockViewModal')?.open)openCropClosingStockViewModal(); }).catch(err=>console.error(err)); }
+function saveCrop2ClosingPackedStock(event){ event.preventDefault();const name=document.getElementById('crop2ClosingProduct')?.value||'',qty=Number(document.getElementById('crop2ClosingQty')?.value||0);if(!name||!(qty>0)){bcAlert('Select a product and enter a closing quantity.');return;}const cycle=getCrop2ClosingCycle(),x=getCrop2ClosingProductPrice(name);if(!(x.price>0)){bcAlert('No cost price is available for this product. Record a Crop 2 purchase or ensure it came from Crop 1 opening stock first.');return;}const fifo=getFifoPhysicalClosingValuation(name,x.category||'Fertilizer',cycle.year,'Crop 2',qty,new Date().toISOString().slice(0,10),crop2ClosingEditingId);if(!fifo.ok){bcAlert(`${fifo.reason}${fifo.excessQty>0 ? ` Excess: ${fifo.excessQty.toLocaleString('en-IN',{maximumFractionDigits:3})} base units.` : ''}`);return;}if(!(fifo.closingValue>=0)||(qty>0&&!(fifo.closingRate>0))){bcAlert('FIFO closing valuation could not be calculated. Check purchases, returns and usage history.');return;}const entries=getCrop2ClosingPackedStockEntries();let idx=crop2ClosingEditingId?entries.findIndex(e=>String(e.id)===String(crop2ClosingEditingId)):-1;const key=name.trim().toLowerCase();const duplicateIdx=entries.findIndex(e=>e.cycleId===cycle.id&&String(e.name).trim().toLowerCase()===key&&(!crop2ClosingEditingId||String(e.id)!==String(crop2ClosingEditingId)));if(duplicateIdx>=0){bcAlert('A Crop 2 closing inventory entry for this product already exists. Edit that entry instead.');return;}const rec={id:idx>=0?entries[idx].id:`c2close-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,cycleId:cycle.id,year:cycle.year,crop:'Crop 2',name:name.trim(),company:x.vendor,category:x.category||'Fertilizer',unit:x.unit,qty,price:Number(fifo.closingRate||0),value:Number(fifo.closingValue||0),fifoClosingValue:Number(fifo.closingValue||0),fifoClosingRate:Number(fifo.closingRate||0),fifoTheoreticalQty:Number(fifo.theoreticalQty||0),fifoShortageQty:Number(fifo.shortageQty||0),fifoShortageValue:Number(fifo.adjustmentValue||0),fifoValuation:'FIFO physical closing',date:new Date().toISOString()};if(idx>=0)entries[idx]=rec;else entries.push(rec);saveCrop2ClosingPackedStockEntries(entries).then(()=>{const wasEditing=idx>=0;crop2ClosingEditingId=null;renderCropClosingStockPanel();renderCrop2ClosingPackedStockSavedList();document.getElementById('crop2ClosingQty').value='';updateCrop2ClosingProductPreview();const submit=document.getElementById('crop2ClosingPackedStockModal')?.querySelector('button[type="submit"]');if(submit)submit.textContent='Save Closing Stock';bcAlert(wasEditing?'Crop 2 closing stock updated.':'Crop 2 closing stock saved.');}).catch(err=>console.error(err)); }
 function openActiveCropClosingPackedStockModal(){ const crop=String((typeof getActiveCycle==='function'?getActiveCycle():activeCycle)?.crop||'').trim().toLowerCase(); if(crop==='crop 2') openCrop2ClosingPackedStockModal(); else openCrop1ClosingPackedStockModal(); }
 document.addEventListener('DOMContentLoaded',()=>{ const input=document.getElementById('crop2ClosingProductSearch'),picker=document.getElementById('crop2ClosingProductPicker'),dd=document.getElementById('crop2ClosingProductDropdown');input?.addEventListener('focus',()=>{if(dd){dd.hidden=false;filterCrop2ClosingProductDropdown();}});input?.addEventListener('input',()=>{crop2ClosingKeyboardIndex=-1;filterCrop2ClosingProductDropdown();});input?.addEventListener('keydown',handleCrop2ClosingProductKeydown);picker?.querySelector('.closing-product-search-wrap')?.addEventListener('click',()=>{input?.focus();if(dd)dd.hidden=false;filterCrop2ClosingProductDropdown();});document.addEventListener('click',e=>{if(picker&&!picker.contains(e.target)&&dd){dd.hidden=true;crop2ClosingKeyboardIndex=-1;}});document.getElementById('crop2ClosingProduct')?.addEventListener('change',updateCrop2ClosingProductPreview);document.getElementById('crop2ClosingQty')?.addEventListener('input',updateCrop2ClosingProductPreview);document.getElementById('crop2ClosingPackedStockForm')?.addEventListener('submit',saveCrop2ClosingPackedStock);});
 
@@ -7101,7 +7235,7 @@ function editCrop1ClosingPackedStock(id){
     if(submit)submit.textContent='Update Closing Stock';
     m.showModal();
 }
-function deleteCrop1ClosingPackedStock(id){ if(!confirm('Delete this Crop 1 closing stock entry?'))return; saveCrop1ClosingPackedStockEntries(getCrop1ClosingPackedStockEntries().filter(e=>String(e.id)!==String(id))); crop1ClosingEditingId=null; renderCropClosingStockPanel(); renderCrop1ClosingPackedStockSavedList(); if(document.getElementById('cropClosingStockViewModal')?.open) openCropClosingStockViewModal(); }
+function deleteCrop1ClosingPackedStock(id){ if(!confirm('Delete this Crop 1 closing stock entry?'))return; const next=getCrop1ClosingPackedStockEntries().filter(e=>String(e.id)!==String(id)); firebaseFirstDelete('crop1ClosingPackedStock', String(id), {label:'Crop 1 closing stock'}).then(()=>{ localStorage.setItem(STORAGE_KEYS.CROP1_CLOSING_PACKED_STOCK, JSON.stringify(next)); crop1ClosingEditingId=null; renderCropClosingStockPanel(); renderCrop1ClosingPackedStockSavedList(); if(document.getElementById('cropClosingStockViewModal')?.open) openCropClosingStockViewModal(); }).catch(err=>console.error(err)); }
 function saveCrop1ClosingPackedStock(event){
     event.preventDefault(); const name=document.getElementById('crop1ClosingProduct')?.value||'', qty=Number(document.getElementById('crop1ClosingQty')?.value||0); if(!name||!(qty>0)){bcAlert('Select a product and enter a closing quantity.');return;}
     const cycle=getCrop1ClosingCycle(), x=getCrop1ClosingProductPrice(name); if(!(x.price>0)){bcAlert('No purchase price is available for this product. Please record a purchase first.');return;}
@@ -7115,43 +7249,143 @@ function saveCrop1ClosingPackedStock(event){
     if(duplicateIdx>=0){bcAlert('A closing inventory entry for this product already exists. Edit that entry instead.');return;}
     const rec={id:idx>=0?entries[idx].id:`c1close-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,cycleId:cycle.id,year:cycle.year,crop:'Crop 1',name:name.trim(),company:x.vendor,category:x.category||'Fertilizer',unit:x.unit,qty,price:Number(fifo.closingRate||0),value:Number(fifo.closingValue||0),fifoClosingValue:Number(fifo.closingValue||0),fifoClosingRate:Number(fifo.closingRate||0),fifoTheoreticalQty:Number(fifo.theoreticalQty||0),fifoShortageQty:Number(fifo.shortageQty||0),fifoShortageValue:Number(fifo.adjustmentValue||0),fifoValuation:'FIFO physical closing',date:new Date().toISOString()};
     if(idx>=0)entries[idx]=rec;else entries.push(rec);
-    saveCrop1ClosingPackedStockEntries(entries);
-    const wasEditing=idx>=0;
-    crop1ClosingEditingId=null;
-    renderCropClosingStockPanel(); renderCrop1ClosingPackedStockSavedList();
-    document.getElementById('crop1ClosingQty').value=''; updateCrop1ClosingProductPreview();
-    const submit=document.getElementById('crop1ClosingPackedStockModal')?.querySelector('button[type="submit"]'); if(submit)submit.textContent='Save Closing Stock';
-    bcAlert(wasEditing?'Closing stock updated.':'Closing stock saved.');
+    saveCrop1ClosingPackedStockEntries(entries).then(() => {
+      const wasEditing=idx>=0;
+      crop1ClosingEditingId=null;
+      renderCropClosingStockPanel(); renderCrop1ClosingPackedStockSavedList();
+      document.getElementById('crop1ClosingQty').value=''; updateCrop1ClosingProductPreview();
+      const submit=document.getElementById('crop1ClosingPackedStockModal')?.querySelector('button[type="submit"]'); if(submit)submit.textContent='Save Closing Stock';
+      bcAlert(wasEditing?'Closing stock updated.':'Closing stock saved.');
+    }).catch(err => console.error('Crop 1 closing stock Firebase save failed:', err));
 }
 
 document.addEventListener('DOMContentLoaded',()=>{ const input=document.getElementById('crop1ClosingProductSearch'), picker=document.getElementById('crop1ClosingProductPicker'), dd=document.getElementById('crop1ClosingProductDropdown'); input?.addEventListener('focus',()=>{if(dd){dd.hidden=false;filterCrop1ClosingProductDropdown();}}); input?.addEventListener('input',()=>{crop1ClosingKeyboardIndex=-1;filterCrop1ClosingProductDropdown();}); input?.addEventListener('keydown',handleCrop1ClosingProductKeydown); picker?.querySelector('.closing-product-search-wrap')?.addEventListener('click',()=>{input?.focus();if(dd)dd.hidden=false;filterCrop1ClosingProductDropdown();}); document.addEventListener('click',e=>{if(picker&&!picker.contains(e.target)&&dd){dd.hidden=true;crop1ClosingKeyboardIndex=-1;}}); document.getElementById('crop1ClosingProduct')?.addEventListener('change',updateCrop1ClosingProductPreview);document.getElementById('crop1ClosingQty')?.addEventListener('input',updateCrop1ClosingProductPreview);document.getElementById('crop1ClosingPackedStockForm')?.addEventListener('submit',saveCrop1ClosingPackedStock);});
 
+function getPurchaseYear(p) {
+  const direct = Number(p?.year || p?.cropYear || 0);
+  if (direct >= 2000 && direct <= 2100) return direct;
+  const d = String(p?.date || p?.purchaseDate || '');
+  const m = d.match(/(20\d{2})/);
+  if (m) return Number(m[1]);
+  const cid = String(p?.cycleId || '');
+  const cy = cid.match(/(20\d{2})/);
+  if (cy) return Number(cy[1]);
+  return 0;
+}
+function getPurchaseCrop(p) {
+  const cid = String(p?.cycleId || '').toLowerCase();
+  // cycleId is the original import/save slot. Prefer it over crop, which may have
+  // been overwritten when the top-bar crop was changed.
+  if (cid.includes('crop 1') || cid.includes('crop1') || cid.endsWith('|c1')) return 'Crop 1';
+  if (cid.includes('crop 2') || cid.includes('crop2') || cid.endsWith('|c2')) return 'Crop 2';
+  const explicit = String(p?.crop || p?.cropCycle || '').trim();
+  if (explicit) return pondwiseNormaliseCrop(explicit);
+  return 'Crop 1';
+}
+function purchaseDedupeKey(p) {
+  return [
+    String(p?.date || p?.purchaseDate || '').slice(0, 10),
+    String(p?.invoiceNo || '').trim().toLowerCase(),
+    String(p?.supplier || '').trim().toLowerCase(),
+    String(p?.name || '').trim().toLowerCase(),
+    String(p?.qty ?? ''),
+    String(p?.unitPrice ?? '')
+  ].join('|');
+}
+function retagPurchaseToCrop(p, year, crop) {
+  const nextCrop = pondwiseNormaliseCrop(crop || 'Crop 1');
+  const nextYear = Number(year || getPurchaseYear(p) || activeCycle?.year || new Date().getFullYear());
+  p.crop = nextCrop;
+  p.cropCycle = nextCrop;
+  p.year = nextYear;
+  p.cycleId = cycleIdFor(nextYear, nextCrop);
+  return p;
+}
+function repairPurchaseCropAssignments() {
+  const list = Array.isArray(purchases) ? purchases : [];
+  if (!list.length) return false;
+  const removed = [];
+
+  const collapse = rows => {
+    const seen = new Set();
+    const kept = [];
+    rows.forEach(p => {
+      const key = `${getPurchaseYear(p)}|${getPurchaseCrop(p)}|${purchaseDedupeKey(p)}`;
+      if (seen.has(key)) {
+        removed.push(p);
+        return;
+      }
+      seen.add(key);
+      kept.push(p);
+    });
+    return kept;
+  };
+
+  let next = collapse(list);
+
+  const crop1KeysByYear = new Map();
+  next.forEach(p => {
+    if (getPurchaseCrop(p) !== 'Crop 1') return;
+    const year = getPurchaseYear(p);
+    if (!crop1KeysByYear.has(year)) crop1KeysByYear.set(year, new Set());
+    crop1KeysByYear.get(year).add(purchaseDedupeKey(p));
+  });
+  next = next.filter(p => {
+    const year = getPurchaseYear(p);
+    if (getPurchaseCrop(p) === 'Crop 2' && crop1KeysByYear.get(year)?.has(purchaseDedupeKey(p))) {
+      removed.push(p);
+      return false;
+    }
+    return true;
+  });
+
+  const byYear = new Map();
+  next.forEach(p => {
+    const year = getPurchaseYear(p);
+    if (!byYear.has(year)) byYear.set(year, []);
+    byYear.get(year).push(p);
+  });
+  const moved = [];
+  byYear.forEach((rows, year) => {
+    const hasCrop1 = rows.some(p => getPurchaseCrop(p) === 'Crop 1');
+    const crop2 = rows.filter(p => getPurchaseCrop(p) === 'Crop 2');
+    if (crop2.length && !hasCrop1) crop2.forEach(p => { retagPurchaseToCrop(p, year, 'Crop 1'); moved.push(p); });
+  });
+  next = collapse(Array.from(byYear.values()).flat());
+
+  const changed = removed.length > 0 || moved.length > 0 || next.length !== list.length;
+  if (!changed) return false;
+  purchases = next;
+  removed.forEach(p => suppressPurchaseRecord(p, p?.id));
+  if (removed.length && typeof deleteDocsFromCloud === 'function') {
+    deleteDocsFromCloud('purchases', removed).catch(err => console.warn('Could not delete duplicate purchases from Cloud:', err));
+  }
+  if (moved.length && typeof firebaseFirstBatchWrite === 'function') {
+    firebaseFirstBatchWrite('purchases', moved, { silent: true, label: 'Purchase' }).catch(() => {});
+  }
+  return true;
+}
 function getActivePurchases() {
   const cycleYear = Number(activeCycle?.year || new Date().getFullYear());
   const cycleCrop = pondwiseNormaliseCrop(activeCycle?.crop || 'Crop 1');
-  return (Array.isArray(purchases) ? purchases : []).filter(p => {
-    // Purchase records are ERP records and already carry their own Year + Crop.
-    // Do NOT infer their cycle from pond fields or getRecordYear(), because a
-    // purchase has no pond and that inference can make a perfectly valid
-    // purchase disappear from Purchase History.
-    const py = Number(p?.year || p?.cropYear || String(p?.date || '').slice(0,4) || 0);
-    const pc = pondwiseNormaliseCrop(p?.crop || p?.cropCycle || 'Crop 1');
-    return py === cycleYear && pc === cycleCrop;
-  });
+  const list = Array.isArray(purchases) ? purchases : [];
+  return list.filter(p => getPurchaseYear(p) === cycleYear && getPurchaseCrop(p) === cycleCrop);
 }
 function getActiveStockReturns() { return stockReturns.filter(isRecordInActiveCycle); }
 function getActiveVendorTransactions() { return vendorTransactions.filter(isRecordInActiveCycle); }
-function syncFarmCyclesToFirebase() {
-  if (!db || !Array.isArray(farmCycles)) return;
-  farmCycles.forEach(c => {
-    if (!c || !c.id || !c.year || !c.crop) return;
-    db.collection('farmCycles').doc(String(c.id)).set({
+function syncFarmCyclesToFirebase(options = {}) {
+  if (!Array.isArray(farmCycles) || !farmCycles.length) return Promise.resolve();
+  const records = farmCycles
+    .filter(c => c && c.id && c.year && c.crop)
+    .map(c => ({
       id: String(c.id),
       year: Number(c.year),
       crop: String(c.crop).trim(),
       name: c.name || `${c.year} ${c.crop}`
-    }, { merge: true }).catch(err => console.error('Farm cycle Firebase sync error:', err));
-  });
+    }));
+  if (!records.length) return Promise.resolve();
+  return firebaseFirstBatchWrite('farmCycles', records, { silent: options.silent !== false, label: 'Year & Crop' })
+    .catch(err => console.error('Farm cycle Firebase sync error:', err));
 }
 function ensureFarmCycles() {
   const map = new Map();
@@ -7186,6 +7420,10 @@ function setActiveCycle(year, crop) {
   const found=farmCycles.find(c=>c.year===Number(year)&&c.crop.toLowerCase()===String(crop).toLowerCase());
   if(!found) return;
   activeCycle={...found}; localStorage.setItem(STORAGE_KEYS.ACTIVE_CYCLE,JSON.stringify(activeCycle));
+  if (typeof repairPurchaseCropAssignments === 'function' && repairPurchaseCropAssignments()) {
+    try { localStorage.setItem(STORAGE_KEYS.PURCHASES, JSON.stringify(purchases)); } catch (e) {}
+    if (typeof saveStorage === 'function') saveStorage();
+  }
   renderGlobalCycleSelector(); renderAll();
 }
 function renderCycleManagerList() {
@@ -7198,7 +7436,7 @@ function setupGlobalCycleContext() {
   cs?.addEventListener('change',()=>setActiveCycle(activeCycle.year,cs.value));
   document.getElementById('manageCyclesBtn')?.addEventListener('click',()=>{renderCycleManagerList();document.getElementById('cycleManagerModal')?.classList.add('active');});
   document.getElementById('closeCycleManagerBtn')?.addEventListener('click',()=>document.getElementById('cycleManagerModal')?.classList.remove('active'));
-  document.getElementById('cycleForm')?.addEventListener('submit',e=>{e.preventDefault();const year=Number(document.getElementById('cycleYearInput').value);const crop=document.getElementById('cycleCropInput').value.trim();if(!year||!crop)return;const id=cycleIdFor(year,crop);if(!farmCycles.some(c=>c.id===id)){farmCycles.push({id,year,crop,name:`${year} ${crop}`});farmCycles.sort((a,b)=>a.year-b.year||a.crop.localeCompare(b.crop,undefined,{numeric:true}));localStorage.setItem(STORAGE_KEYS.FARM_CYCLES,JSON.stringify(farmCycles));syncFarmCyclesToFirebase();setActiveCycle(year,crop);renderCycleManagerList();e.target.reset();}});
+  document.getElementById('cycleForm')?.addEventListener('submit',e=>{e.preventDefault();const year=Number(document.getElementById('cycleYearInput').value);const crop=document.getElementById('cycleCropInput').value.trim();if(!year||!crop)return;const id=cycleIdFor(year,crop);const cycle={id,year,crop,name:`${year} ${crop}`};(async()=>{try{if(!farmCycles.some(c=>c.id===id)){await firebaseFirstBatchWrite('farmCycles',cycle);farmCycles.push(cycle);farmCycles.sort((a,b)=>a.year-b.year||a.crop.localeCompare(b.crop,undefined,{numeric:true}));localStorage.setItem(STORAGE_KEYS.FARM_CYCLES,JSON.stringify(farmCycles));}setActiveCycle(year,crop);renderCycleManagerList();e.target.reset();}catch(err){console.error('Farm cycle save failed:',err);}})();});
 }
 
 function dedupePondsByCycleAndName(list) {
@@ -7257,6 +7495,93 @@ function dedupePondsByCycleAndName(list) {
   return result;
 }
 
+function normalisePurchaseRecord(p, index) {
+  const unitPrice = parseFloat(p?.unitPrice !== undefined ? p.unitPrice : (p?.unitRate !== undefined ? p.unitRate : (p?.price || 0))) || 0;
+  const qty = parseFloat(p?.qty !== undefined ? p.qty : (p?.packSize || 1)) || 0;
+  const totalAmount = parseFloat(p?.totalAmount !== undefined ? p.totalAmount : (qty * unitPrice)) || (qty * unitPrice);
+  const crop = getPurchaseCrop(p);
+  const year = getPurchaseYear(p) || Number(activeCycle?.year || 2026);
+  return {
+    ...p,
+    id: p?.id || p?.firestoreId || `pur_local_${index}_${String(p?.date || '')}_${String(p?.name || '').trim().toLowerCase()}_${String(p?.supplier || '').trim().toLowerCase()}`,
+    date: p?.date || new Date().toISOString().split('T')[0],
+    year,
+    crop,
+    cycleId: p?.cycleId || cycleIdFor(year, crop),
+    invoiceNo: String(p?.invoiceNo || '').trim(),
+    name: String(p?.name || 'Unnamed Product').trim(),
+    company: String(p?.company || 'Local').trim(),
+    supplier: String(p?.supplier || '').trim(),
+    category: p?.category || 'Fertilizer',
+    qty,
+    unit: p?.unit || p?.packUnit || 'Bag/Pkt',
+    packSize: Number(p?.packSize || 1),
+    stockUnit: p?.stockUnit || p?.unit || p?.packUnit || 'Bag/Pkt',
+    unitPrice,
+    invoiceUnitPrice: p?.invoiceUnitPrice !== undefined && p?.invoiceUnitPrice !== null
+      ? (parseFloat(p.invoiceUnitPrice) || 0)
+      : (String(p?.category || '').trim().toLowerCase() === 'feed' ? unitPrice : null),
+    finalUnitPrice: p?.finalUnitPrice !== undefined && p?.finalUnitPrice !== null
+      ? (parseFloat(p.finalUnitPrice) || unitPrice)
+      : (String(p?.category || '').trim().toLowerCase() === 'feed' ? unitPrice : null),
+    totalAmount
+  };
+}
+
+function purchaseIdentityKeys(p) {
+  return [p?.id, p?.firestoreId, p?.legacyRecordId]
+    .map(v => String(v ?? '').trim())
+    .filter(v => v && v !== 'undefined' && v !== 'null');
+}
+
+function isPurchaseSuppressed(p) {
+  return purchaseIdentityKeys(p).some(k => suppressedPurchaseIds.has(k));
+}
+
+function suppressPurchaseRecord(p, extraId) {
+  purchaseIdentityKeys(p).concat(extraId ? [String(extraId)] : []).forEach(k => {
+    const key = String(k || '').trim();
+    if (key && key !== 'undefined' && key !== 'null') suppressedPurchaseIds.add(key);
+  });
+}
+
+function removeLocalPurchase(id) {
+  const wanted = String(id ?? '').trim();
+  const list = Array.isArray(purchases) ? purchases : [];
+  const found = list.find(p => purchaseIdentityKeys(p).includes(wanted)) || null;
+  suppressPurchaseRecord(found || {}, wanted);
+  purchases = list.filter(p => !isPurchaseSuppressed(p) && !purchaseIdentityKeys(p).includes(wanted));
+  return found;
+}
+
+function mergePurchasesPreservingLocal(localList, cloudList) {
+  const local = (Array.isArray(localList) ? localList : []).map((p, i) => normalisePurchaseRecord(p, i)).filter(p => !isPurchaseSuppressed(p));
+  const cloud = (Array.isArray(cloudList) ? cloudList : []).map((p, i) => normalisePurchaseRecord({
+    ...p,
+    id: p?.id || p?.firestoreId
+  }, i + 100000)).filter(p => !isPurchaseSuppressed(p));
+  if (!cloud.length) return local;
+  const byId = new Map();
+  local.forEach(p => { if (p?.id) byId.set(String(p.id), p); });
+  cloud.forEach(p => {
+    if (!p?.id) return;
+    const existing = byId.get(String(p.id));
+    if (!existing) {
+      byId.set(String(p.id), p);
+      return;
+    }
+    const existingQty = Number(existing.qty || 0);
+    const cloudQty = Number(p.qty || 0);
+    const existingNamed = String(existing.name || '').trim() && existing.name !== 'Unnamed Product';
+    const cloudNamed = String(p.name || '').trim() && p.name !== 'Unnamed Product';
+    if (existingNamed && !cloudNamed) return;
+    if (existingQty > 0 && cloudQty <= 0) return;
+    byId.set(String(p.id), { ...existing, ...p, name: existingNamed ? existing.name : p.name, qty: existingQty > cloudQty ? existing.qty : p.qty, supplier: existing.supplier || p.supplier, crop: existing.crop || p.crop, year: existing.year || p.year });
+  });
+  const merged = [...byId.values()];
+  return merged.length ? merged : local;
+}
+
 // Legacy pond setup reset removed: production data must never be deleted automatically.
 function loadAndEnsureData() {
   try {
@@ -7268,6 +7593,8 @@ function loadAndEnsureData() {
     samples = JSON.parse(localStorage.getItem(STORAGE_KEYS.SAMPLES)) || [];
     harvests = JSON.parse(localStorage.getItem(STORAGE_KEYS.HARVESTS)) || [];
     purchases = JSON.parse(localStorage.getItem(STORAGE_KEYS.PURCHASES)) || [];
+    if (!Array.isArray(purchases)) purchases = [];
+    purchases = purchases.map((p, index) => normalisePurchaseRecord(p, index));
     stockReturns = JSON.parse(localStorage.getItem(STORAGE_KEYS.STOCK_RETURNS)) || [];
     treatments = JSON.parse(localStorage.getItem(STORAGE_KEYS.TREATMENTS)) || [];
     stockTransfers = JSON.parse(localStorage.getItem(STORAGE_KEYS.STOCK_TRANSFERS)) || [];
@@ -7320,6 +7647,7 @@ function loadAndEnsureData() {
   try {
       if (db) {
           db.collection('ponds').onSnapshot(snapshot => {
+              setFirebaseStatus('connected');
               // Pond Master is shared by mobile + laptop. Always read the
               // Firestore document data as the logical pond identity; the
               // Firestore document ID is only the storage key.
@@ -7362,7 +7690,10 @@ function loadAndEnsureData() {
                 setTimeout(() => reconcileExisting(), 100);
                 setTimeout(() => reconcileExisting(), 1200);
               }
-          }, err => console.error("Firestore pond listener error:", err));
+          }, err => {
+            setFirebaseStatus('disconnected');
+            console.error("Firestore pond listener error:", err);
+          });
 
           db.collection('feeds').onSnapshot(snapshot => {
             // Firestore is authoritative for shared operational records.
@@ -7478,11 +7809,17 @@ function loadAndEnsureData() {
           // so a saved purchase cannot disappear after a reload/device change. Merge cloud records
           // with local records to preserve older local-only purchases during migration.
           db.collection('purchases').onSnapshot(snapshot => {
-              const cloudPurchases = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-              const byId = new Map();
-              (Array.isArray(purchases) ? purchases : []).forEach(p => { if (p?.id) byId.set(String(p.id), p); });
-              cloudPurchases.forEach(p => { if (p?.id) byId.set(String(p.id), p); });
-              purchases = [...byId.values()];
+              const localBefore = Array.isArray(purchases) ? purchases.slice() : [];
+              const cloudPurchases = snapshot.docs.map(doc => {
+                const data = doc.data() || {};
+                return { ...data, id: data.id || doc.id, firestoreId: doc.id };
+              });
+              purchases = mergePurchasesPreservingLocal(localBefore, cloudPurchases);
+              if (!purchases.length && localBefore.length) {
+                const recovered = localBefore.filter(p => !isPurchaseSuppressed(p));
+                if (recovered.length) purchases = recovered.map((p, i) => normalisePurchaseRecord(p, i));
+              }
+              if (typeof repairPurchaseCropAssignments === 'function') repairPurchaseCropAssignments();
               try { localStorage.setItem(STORAGE_KEYS.PURCHASES, JSON.stringify(purchases)); } catch (e) { console.warn('Purchase local cache update failed:', e); }
               if (typeof renderAll === 'function') renderAll();
           }, err => console.error('Firestore purchase listener error:', err));
@@ -7580,40 +7917,14 @@ function loadAndEnsureData() {
   ponds = dedupePondsByCycleAndName(ponds);
   if (!samples || samples.length === 0) samples = [...defaultSamples];
   if (!harvests || harvests.length === 0) harvests = [...defaultHarvests];
-  if (!purchases || purchases.length === 0) purchases = [...defaultPurchases];
+  // Do not seed demo purchases. An empty purchase list must be able to
+  // restore from the shared Firebase farm backup instead.
   if (!stockReturns || stockReturns.length === 0) stockReturns = [...defaultStockReturns];
   if (!treatments || treatments.length === 0) treatments = [...defaultTreatments];
   if (!vendorTransactions || vendorTransactions.length === 0) vendorTransactions = [...defaultVendorTransactions];
 
-  purchases = purchases.map((p, index) => {
-    const unitPrice = parseFloat(p.unitPrice !== undefined ? p.unitPrice : (p.unitRate !== undefined ? p.unitRate : (p.price || 0))) || 0;
-    const qty = parseFloat(p.qty !== undefined ? p.qty : (p.packSize || 1)) || 0;
-    const totalAmount = parseFloat(p.totalAmount !== undefined ? p.totalAmount : (qty * unitPrice)) || (qty * unitPrice);
-    return {
-      id: p.id || `pur_${Date.now()}_${index}`,
-      date: p.date || new Date().toISOString().split('T')[0],
-      year: Number(p.year || 2026),
-      crop: p.crop || 'Crop 1',
-      cycleId: p.cycleId || cycleIdFor(Number(p.year || 2026), p.crop || 'Crop 1'),
-      invoiceNo: (p.invoiceNo || '').trim(),
-      name: (p.name || 'Unnamed Product').trim(),
-      company: (p.company || 'Local').trim(),
-      supplier: (p.supplier || '').trim(),
-      category: p.category || 'Fertilizer',
-      qty: qty,
-      unit: p.unit || p.packUnit || 'Bag/Pkt',
-      packSize: Number(p.packSize || (String(p.unit || p.packUnit || '').toLowerCase() === 'bag/pkt' ? 1 : 1)),
-      stockUnit: p.stockUnit || p.unit || p.packUnit || 'Bag/Pkt',
-      unitPrice: unitPrice,
-      invoiceUnitPrice: p.invoiceUnitPrice !== undefined && p.invoiceUnitPrice !== null
-        ? (parseFloat(p.invoiceUnitPrice) || 0)
-        : (String(p.category || '').trim().toLowerCase() === 'feed' ? unitPrice : null),
-      finalUnitPrice: p.finalUnitPrice !== undefined && p.finalUnitPrice !== null
-        ? (parseFloat(p.finalUnitPrice) || unitPrice)
-        : (String(p.category || '').trim().toLowerCase() === 'feed' ? unitPrice : null),
-      totalAmount: totalAmount
-    };
-  });
+  purchases = (Array.isArray(purchases) ? purchases : []).map((p, index) => normalisePurchaseRecord(p, index));
+  if (typeof repairPurchaseCropAssignments === 'function') repairPurchaseCropAssignments();
 
   stockReturns = stockReturns.map((r, index) => {
     const unitPrice = parseFloat(r.unitPrice) || 0;
@@ -7639,24 +7950,312 @@ function loadAndEnsureData() {
   saveStorage();
 }
 
-async function firebaseFirstBatchWrite(collectionName, records) {
+async function firebaseFirstBatchWrite(collectionName, records, options = {}) {
   // Login gate is temporarily disabled. Firestore Security Rules still control
   // whether cloud writes are permitted for the current Firebase session.
-
-  if (typeof db === 'undefined' || !db) throw new Error('Firebase is not connected. Data was not saved.');
-  const list = Array.isArray(records) ? records : [records];
-  const batch = db.batch();
-  list.forEach(record => batch.set(db.collection(collectionName).doc(String(record.id)), record, { merge: true }));
-  await batch.commit();
+  const label = options.label || firebaseCollectionLabel(collectionName);
+  const silent = options.silent === true;
+  try {
+    await commitFirestoreRecords(collectionName, records);
+    setFirebaseStatus('connected');
+    if (!silent) notifyFirebaseSave(true, label);
+  } catch (err) {
+    setFirebaseStatus('disconnected');
+    if (!silent) notifyFirebaseSave(false, label, err);
+    throw err;
+  }
 }
 
-function saveStorage() {
-  // Firestore is authoritative for these large operational collections and
-  // their listeners already refresh the local cache. Do not stringify them
-  // on every unrelated save; this keeps Purchase History from repeatedly
-  // serializing the entire farm history and avoids unnecessary UI stalls.
+async function commitFirestoreRecords(collectionName, records) {
+  requireFirebaseConnection();
+  const list = (Array.isArray(records) ? records : [records]).filter(record => record && (record.firestoreId != null || record.id != null));
+  for (let i = 0; i < list.length; i += 400) {
+    const chunk = list.slice(i, i + 400);
+    const batch = db.batch();
+    chunk.forEach(record => {
+      const docId = String(record.firestoreId || record.id).trim();
+      if (!docId) throw new Error('A record is missing its ID and cannot be saved.');
+      batch.set(db.collection(collectionName).doc(docId), record, { merge: true });
+    });
+    await batch.commit();
+  }
+}
+
+async function firebaseFirstDelete(collectionName, firestoreId, options = {}) {
+  const label = options.label || firebaseCollectionLabel(collectionName);
+  const silent = options.silent === true;
+  try {
+    requireFirebaseConnection();
+    await db.collection(collectionName).doc(String(firestoreId)).delete();
+    setFirebaseStatus('connected');
+    if (!silent) notifyFirebaseDelete(true, label);
+  } catch (err) {
+    setFirebaseStatus('disconnected');
+    if (!silent) notifyFirebaseDelete(false, label, err);
+    throw err;
+  }
+}
+
+async function deleteDocsFromCloud(collectionName, list) {
+  const ids = [...new Set((Array.isArray(list) ? list : []).map(p => String(p?.firestoreId || p?.id || '').trim()).filter(Boolean))];
+  if (!ids.length || typeof db === 'undefined' || !db) return;
+  try {
+    requireFirebaseConnection();
+    for (let i = 0; i < ids.length; i += 400) {
+      const batch = db.batch();
+      ids.slice(i, i + 400).forEach(id => batch.delete(db.collection(collectionName).doc(id)));
+      await batch.commit();
+    }
+    setFirebaseStatus('connected');
+  } catch (err) {
+    console.warn(`Could not delete ${collectionName} records from Cloud:`, err);
+  }
+}
+
+async function deletePurchaseDocsFromCloud(list) {
+  return deleteDocsFromCloud('purchases', list);
+}
+
+async function clearActiveCropInventory() {
+  const cycleYear = Number(activeCycle?.year || new Date().getFullYear());
+  const cycleCrop = pondwiseNormaliseCrop(activeCycle?.crop || 'Crop 1');
+  const cycleId = String(activeCycle?.id || (typeof cycleIdFor === 'function' ? cycleIdFor(cycleYear, cycleCrop) : ''));
+  const ok = confirm(
+    `Delete the inventory currently showing for ${cycleYear} • ${cycleCrop}?\n\nThis removes this crop's purchase bills, vendor returns, physical counts, feed counted stock and closing inventory.\n\nIt does NOT delete ponds, Feed Entry, treatments, other crops, or the product catalogue.\n\nAfter this, Inventory will be empty until you import or record real purchases.`
+  );
+  if (!ok) return;
+  try {
+    const purchasesToRemove = typeof getActivePurchases === 'function' ? getActivePurchases() : [];
+    const returnsToRemove = typeof getActiveStockReturns === 'function' ? getActiveStockReturns() : [];
+    const purchaseIds = new Set(purchasesToRemove.map(p => String(p?.id || p?.firestoreId || '')).filter(Boolean));
+    const returnIds = new Set(returnsToRemove.map(r => String(r?.id || r?.firestoreId || '')).filter(Boolean));
+    purchases = (Array.isArray(purchases) ? purchases : []).filter(p => {
+      const id = String(p?.id || p?.firestoreId || '');
+      if (id && purchaseIds.has(id)) return false;
+      return !(typeof getPurchaseYear === 'function' && typeof getPurchaseCrop === 'function' && getPurchaseYear(p) === cycleYear && getPurchaseCrop(p) === cycleCrop);
+    });
+    stockReturns = (Array.isArray(stockReturns) ? stockReturns : []).filter(r => {
+      const id = String(r?.id || r?.firestoreId || '');
+      if (id && returnIds.has(id)) return false;
+      return typeof isRecordInActiveCycle === 'function' ? !isRecordInActiveCycle(r) : true;
+    });
+
+    const c1All = typeof getCrop1ClosingPackedStockEntries === 'function' ? getCrop1ClosingPackedStockEntries() : [];
+    const c2All = typeof getCrop2ClosingPackedStockEntries === 'function' ? getCrop2ClosingPackedStockEntries() : [];
+    const c1Remove = c1All.filter(e => String(e.cycleId || '') === cycleId);
+    const c2Remove = c2All.filter(e => String(e.cycleId || '') === cycleId);
+    const c1Keep = c1All.filter(e => String(e.cycleId || '') !== cycleId);
+    const c2Keep = c2All.filter(e => String(e.cycleId || '') !== cycleId);
+    localStorage.setItem(STORAGE_KEYS.CROP1_CLOSING_PACKED_STOCK, JSON.stringify(c1Keep));
+    localStorage.setItem(STORAGE_KEYS.CROP2_CLOSING_PACKED_STOCK, JSON.stringify(c2Keep));
+
+    const settlementsAll = typeof getPhysicalInventorySettlements === 'function' ? getPhysicalInventorySettlements() : [];
+    const settlementsRemove = settlementsAll.filter(r => String(r.cycleId || '') === cycleId);
+    const settlementsKeep = settlementsAll.filter(r => String(r.cycleId || '') !== cycleId);
+    localStorage.setItem(STORAGE_KEYS.PHYSICAL_INVENTORY_SETTLEMENTS, JSON.stringify(settlementsKeep));
+
+    const prefix = `${cycleId}|`;
+    if (feedPhysicalStock && typeof feedPhysicalStock === 'object') {
+      Object.keys(feedPhysicalStock).forEach(key => {
+        if (String(key).startsWith(prefix)) delete feedPhysicalStock[key];
+      });
+    }
+    feedStockAdjustments = (Array.isArray(feedStockAdjustments) ? feedStockAdjustments : []).filter(a => getRecordCycleId(a) !== cycleId);
+    const feedCloseRemove = (Array.isArray(feedCropClosingAdjustments) ? feedCropClosingAdjustments : []).filter(a => cycleIdFor(a.year || getRecordYear(a) || cycleYear, a.crop || 'Crop 1') === cycleId);
+    feedCropClosingAdjustments = (Array.isArray(feedCropClosingAdjustments) ? feedCropClosingAdjustments : []).filter(a => cycleIdFor(a.year || getRecordYear(a) || cycleYear, a.crop || 'Crop 1') !== cycleId);
+
+    await deleteDocsFromCloud('purchases', purchasesToRemove);
+    await deleteDocsFromCloud('stockReturns', returnsToRemove);
+    await deleteDocsFromCloud('crop1ClosingPackedStock', c1Remove);
+    await deleteDocsFromCloud('crop2ClosingPackedStock', c2Remove);
+    await deleteDocsFromCloud('physicalInventorySettlements', settlementsRemove);
+    await deleteDocsFromCloud('feedCropClosingAdjustments', feedCloseRemove);
+
+    saveStorage();
+    if (typeof renderInventoryAndPurchases === 'function') renderInventoryAndPurchases();
+    if (typeof renderAll === 'function') {
+      try { renderAll(); } catch (renderErr) { console.warn('Inventory cleared; dashboard refresh had an error:', renderErr); }
+    }
+    bcAlert(`Inventory figures for ${cycleYear} • ${cycleCrop} were deleted.\n\nPonds, Feed Entry and treatments were not deleted.\nImport the real purchase CSV next so Inventory qty is calculated from those bills.`);
+  } catch (err) {
+    console.error('Clear inventory error:', err);
+    bcAlert(`Could not clear inventory: ${err.message || err}`);
+  }
+}
+
+function promptPurchaseCsvImportMode(cycleYear, cycleCrop, existingCount, incomingCount) {
+  return new Promise(resolve => {
+    const dlg = document.getElementById('purchaseCsvImportModeDialog');
+    const text = document.getElementById('purchaseCsvImportModeText');
+    const msg = `${cycleYear} • ${cycleCrop} already has ${existingCount} purchase line${existingCount === 1 ? '' : 's'}.\n\nThis CSV has ${incomingCount} purchase line${incomingCount === 1 ? '' : 's'}.\n\nReplace = erase only this crop's purchase bills, then load the CSV. Inventory qty will recalculate. Other crops, Feed Entry, treatments and closing stock are not erased.\nAdd = keep the old bills and import the CSV as extra lines (qty will add on top).`;
+    if (text) text.textContent = msg;
+    if (!dlg || typeof dlg.showModal !== 'function') {
+      const replace = confirm(`${msg}\n\nOK = REPLACE this crop's purchase bills with the CSV.\nCancel = stop the import.`);
+      resolve(replace ? 'replace' : 'cancel');
+      return;
+    }
+    const onClose = () => {
+      dlg.removeEventListener('close', onClose);
+      const value = dlg.returnValue;
+      resolve(value === 'replace' || value === 'add' ? value : 'cancel');
+    };
+    dlg.addEventListener('close', onClose);
+    dlg.showModal();
+  });
+}
+
+function isNonEmptyFarmList(value) {
+  return Array.isArray(value) && value.length > 0;
+}
+
+function getFarmBackupSlices() {
+  return {
+    purchases,
+    ponds,
+    feedEntries,
+    samples,
+    harvests,
+    treatments,
+    stockReturns,
+    stockTransfers,
+    vendorTransactions,
+    vendors,
+    ledgerEntries,
+    farmCycles,
+    activeCycle,
+    masterCatalogue,
+    customLedgerSubcategories,
+    customLedgerAccounts,
+    feedPhysicalStock,
+    feedMinStockKg,
+    feedStockAdjustments,
+    feedCropClosingAdjustments,
+    feedCropClosingAdjustmentHistory,
+    productMemory: typeof productMemory !== 'undefined' ? productMemory : {}
+  };
+}
+
+function applyFarmBackupSlice(name, incoming) {
+  if (incoming == null) return false;
+  if (name === 'purchases' && isNonEmptyFarmList(incoming)) {
+    const incomingPurchases = incoming.filter(p => !isPurchaseSuppressed(p));
+    if (!incomingPurchases.length) return false;
+    if (isNonEmptyFarmList(purchases)) {
+      purchases = mergePurchasesPreservingLocal(purchases, incomingPurchases);
+    } else {
+      purchases = incomingPurchases.map((p, i) => normalisePurchaseRecord(p, i));
+    }
+    return true;
+  }
+  const assignList = (current, next) => {
+    if (!isNonEmptyFarmList(next)) return current;
+    if (isNonEmptyFarmList(current)) return current;
+    return next;
+  };
+  if (name === 'ponds') { const next = assignList(ponds, incoming); if (next !== ponds) { ponds = dedupePondsByCycleAndName(next); return true; } return false; }
+  if (name === 'feedEntries') { const next = assignList(feedEntries, incoming); if (next !== feedEntries) { feedEntries = next; return true; } return false; }
+  if (name === 'samples') { const next = assignList(samples, incoming); if (next !== samples) { samples = next; return true; } return false; }
+  if (name === 'harvests') { const next = assignList(harvests, incoming); if (next !== harvests) { harvests = next; return true; } return false; }
+  if (name === 'treatments') { const next = assignList(treatments, incoming); if (next !== treatments) { treatments = next; return true; } return false; }
+  if (name === 'stockReturns') { const next = assignList(stockReturns, incoming); if (next !== stockReturns) { stockReturns = next; return true; } return false; }
+  if (name === 'stockTransfers') { const next = assignList(stockTransfers, incoming); if (next !== stockTransfers) { stockTransfers = next; return true; } return false; }
+  if (name === 'vendorTransactions') { const next = assignList(vendorTransactions, incoming); if (next !== vendorTransactions) { vendorTransactions = next; return true; } return false; }
+  if (name === 'vendors') { const next = assignList(vendors, incoming); if (next !== vendors) { vendors = next; return true; } return false; }
+  if (name === 'ledgerEntries') { const next = assignList(ledgerEntries, incoming); if (next !== ledgerEntries) { ledgerEntries = next; return true; } return false; }
+  if (name === 'farmCycles') { const next = assignList(farmCycles, incoming); if (next !== farmCycles) { farmCycles = next; return true; } return false; }
+  if (name === 'masterCatalogue') { const next = assignList(masterCatalogue, incoming); if (next !== masterCatalogue) { masterCatalogue = next; return true; } return false; }
+  if (name === 'customLedgerSubcategories') { const next = assignList(customLedgerSubcategories, incoming); if (next !== customLedgerSubcategories) { customLedgerSubcategories = next; return true; } return false; }
+  if (name === 'customLedgerAccounts') { const next = assignList(customLedgerAccounts, incoming); if (next !== customLedgerAccounts) { customLedgerAccounts = next; return true; } return false; }
+  if (name === 'feedCropClosingAdjustments') { const next = assignList(feedCropClosingAdjustments, incoming); if (next !== feedCropClosingAdjustments) { feedCropClosingAdjustments = next; return true; } return false; }
+  if (name === 'feedCropClosingAdjustmentHistory') { const next = assignList(feedCropClosingAdjustmentHistory, incoming); if (next !== feedCropClosingAdjustmentHistory) { feedCropClosingAdjustmentHistory = next; return true; } return false; }
+  if (name === 'activeCycle' && incoming && incoming.year && incoming.crop && !(activeCycle && activeCycle.year && farmCycles.length)) {
+    activeCycle = incoming;
+    return true;
+  }
+  if (name === 'feedPhysicalStock' && incoming && typeof incoming === 'object' && !Array.isArray(incoming) && (!feedPhysicalStock || !Object.keys(feedPhysicalStock).length)) {
+    feedPhysicalStock = incoming;
+    return true;
+  }
+  if (name === 'feedMinStockKg' && incoming && typeof incoming === 'object' && !Array.isArray(incoming) && (!feedMinStockKg || !Object.keys(feedMinStockKg).length)) {
+    feedMinStockKg = incoming;
+    return true;
+  }
+  if (name === 'feedStockAdjustments' && isNonEmptyFarmList(incoming) && !isNonEmptyFarmList(feedStockAdjustments)) {
+    feedStockAdjustments = incoming;
+    return true;
+  }
+  if (name === 'productMemory' && incoming && typeof incoming === 'object' && typeof productMemory !== 'undefined' && (!productMemory || !Object.keys(productMemory).length)) {
+    productMemory = incoming;
+    return true;
+  }
+  return false;
+}
+
+async function pullFarmFromCloud() {
+  if (typeof db === 'undefined' || !db) return false;
+  const snap = await db.collection('farmBackup').get();
+  if (snap.empty) return false;
+  let restored = false;
+  snap.docs.forEach(doc => {
+    const data = doc.data() || {};
+    const incoming = Object.prototype.hasOwnProperty.call(data, 'items') ? data.items : data;
+    if (applyFarmBackupSlice(doc.id, incoming)) restored = true;
+  });
+  return restored;
+}
+
+function firestoreSafeValue(value) {
+  try {
+    return JSON.parse(JSON.stringify(value));
+  } catch (e) {
+    return value;
+  }
+}
+
+async function pushFarmToCloud() {
+  if (typeof db === 'undefined' || !db) return;
+  const slices = getFarmBackupSlices();
+  const writes = [];
+  Object.entries(slices).forEach(([name, value]) => {
+    const isList = Array.isArray(value);
+    const isObj = value && typeof value === 'object' && !isList;
+    const emptyList = isList && !value.length;
+    const emptyObj = isObj && !Object.keys(value).length;
+    if (emptyList || emptyObj) return;
+    writes.push({ name, value });
+  });
+  for (let i = 0; i < writes.length; i += 400) {
+    const batch = db.batch();
+    writes.slice(i, i + 400).forEach(({ name, value }) => {
+      const payload = {
+        items: firestoreSafeValue(value),
+        updatedAt: new Date().toISOString()
+      };
+      if (Array.isArray(value)) payload.count = value.length;
+      batch.set(db.collection('farmBackup').doc(name), payload, { merge: true });
+    });
+    await batch.commit();
+  }
+}
+
+let farmBackupTimer = null;
+function scheduleFarmCloudBackup() {
+  clearTimeout(farmBackupTimer);
+  farmBackupTimer = setTimeout(() => {
+    pushFarmToCloud().catch(err => console.warn('Farm cloud backup failed:', err));
+  }, 1500);
+}
+
+function persistAllLocalNow() {
   const localCache = [
+    [STORAGE_KEYS.PURCHASES, purchases],
+    [STORAGE_KEYS.PONDS, ponds],
+    [STORAGE_KEYS.FEEDS, feedEntries],
+    [STORAGE_KEYS.SAMPLES, samples],
+    [STORAGE_KEYS.HARVESTS, harvests],
+    [STORAGE_KEYS.TREATMENTS, treatments],
     [STORAGE_KEYS.STOCK_RETURNS, stockReturns],
+    [STORAGE_KEYS.STOCK_TRANSFERS, stockTransfers],
     [STORAGE_KEYS.VENDOR_TXNS, vendorTransactions],
     [STORAGE_KEYS.VENDORS, vendors],
     [STORAGE_KEYS.LEDGER_ENTRIES, ledgerEntries],
@@ -7666,14 +8265,75 @@ function saveStorage() {
     [STORAGE_KEYS.FEED_PHYSICAL_STOCK, feedPhysicalStock],
     [STORAGE_KEYS.FEED_MIN_STOCK, feedMinStockKg],
     [STORAGE_KEYS.FEED_ADJUSTMENTS, feedStockAdjustments],
+    [STORAGE_KEYS.PRODUCT_MEMORY, typeof productMemory !== 'undefined' ? productMemory : {}],
+    [STORAGE_KEYS.CROP1_CLOSING_PACKED_STOCK, typeof getCrop1ClosingPackedStockEntries === 'function' ? getCrop1ClosingPackedStockEntries() : []],
+    [STORAGE_KEYS.CROP2_CLOSING_PACKED_STOCK, typeof getCrop2ClosingPackedStockEntries === 'function' ? getCrop2ClosingPackedStockEntries() : []],
+    [STORAGE_KEYS.PHYSICAL_INVENTORY_SETTLEMENTS, typeof getPhysicalInventorySettlements === 'function' ? getPhysicalInventorySettlements() : []],
+    [STORAGE_KEYS.FARM_CYCLES, farmCycles],
+    [STORAGE_KEYS.ACTIVE_CYCLE, activeCycle],
     ['bluecrest_feed_crop_closing_adjustments', feedCropClosingAdjustments],
     ['bluecrest_feed_crop_closing_adjustment_history', feedCropClosingAdjustmentHistory]
   ];
   try {
-    localCache.forEach(([key, value]) => localStorage.setItem(key, JSON.stringify(value)));
+    localCache.forEach(([key, value]) => {
+      if (value === undefined) return;
+      localStorage.setItem(key, JSON.stringify(value));
+    });
   } catch (e) {
     console.warn('Local cache save skipped:', e);
   }
+}
+
+function ensureRecordIds(records, prefix) {
+  return (Array.isArray(records) ? records : []).map((record, index) => {
+    if (record && (record.id != null || record.firestoreId != null) && String(record.firestoreId || record.id).trim()) return record;
+    return { ...(record || {}), id: `${prefix}_${Date.now()}_${index}` };
+  });
+}
+
+async function uploadAllLocalFarmToFirebase() {
+  if (!confirm('Upload the farm currently saved in this Chrome to Firebase?\n\nDo this on the laptop Chrome that has the real farm. Firebase is updated first, then this computer.')) return;
+  const btn = document.getElementById('uploadAllToFirebaseBtn');
+  if (btn) btn.disabled = true;
+  try {
+    requireFirebaseConnection();
+    const pondRecords = (Array.isArray(ponds) ? ponds : []).map(p => {
+      const firestoreId = String(p.firestoreId || canonicalPondFirestoreId(p.cycleId || cycleIdFor(p.year, p.crop), p.id || p.name));
+      return { ...p, firestoreId };
+    });
+    await commitFirestoreRecords('ponds', pondRecords);
+    await commitFirestoreRecords('feeds', ensureRecordIds(feedEntries, 'feed'));
+    await commitFirestoreRecords('sampling', ensureRecordIds(samples, 'sample'));
+    await commitFirestoreRecords('harvests', ensureRecordIds(harvests, 'harvest'));
+    await commitFirestoreRecords('treatments', ensureRecordIds(treatments, 'treatment'));
+    await commitFirestoreRecords('purchases', ensureRecordIds(purchases, 'purchase'));
+    await commitFirestoreRecords('stockTransfers', ensureRecordIds(stockTransfers, 'st'));
+    await commitFirestoreRecords('stockReturns', ensureRecordIds(stockReturns, 'sret'));
+    await commitFirestoreRecords('vendorTransactions', ensureRecordIds(vendorTransactions, 'vtxn'));
+    await commitFirestoreRecords('ledgerEntries', ensureRecordIds(ledgerEntries, 'ledger'));
+    await commitFirestoreRecords('farmCycles', ensureRecordIds(farmCycles, 'cycle'));
+    await commitFirestoreRecords('crop1ClosingPackedStock', ensureRecordIds(getCrop1ClosingPackedStockEntries(), 'c1close'));
+    await commitFirestoreRecords('crop2ClosingPackedStock', ensureRecordIds(getCrop2ClosingPackedStockEntries(), 'c2close'));
+    await commitFirestoreRecords('physicalInventorySettlements', ensureRecordIds(getPhysicalInventorySettlements(), 'pis'));
+    if (Array.isArray(feedCropClosingAdjustments) && feedCropClosingAdjustments.length) {
+      await commitFirestoreRecords('feedCropClosingAdjustments', ensureRecordIds(feedCropClosingAdjustments, 'fcc'));
+    }
+    persistAllLocalNow();
+    await pushFarmToCloud();
+    setFirebaseStatus('connected');
+    notifyFirebaseSave(true, 'All farm data');
+  } catch (err) {
+    console.error('Upload all farm data to Firebase failed:', err);
+    setFirebaseStatus('disconnected');
+    notifyFirebaseSave(false, 'All farm data', err);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+function saveStorage() {
+  persistAllLocalNow();
+  scheduleFarmCloudBackup();
 }
 
 function toggleNavGroup(groupId) {
@@ -8688,7 +9348,9 @@ function getPhysicalInventorySettlements() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.PHYSICAL_INVENTORY_SETTLEMENTS) || '[]'); } catch(e) { return []; }
 }
 function savePhysicalInventorySettlements(rows) {
-  localStorage.setItem(STORAGE_KEYS.PHYSICAL_INVENTORY_SETTLEMENTS, JSON.stringify(Array.isArray(rows) ? rows : []));
+  const list = Array.isArray(rows) ? rows : [];
+  return firebaseFirstBatchWrite('physicalInventorySettlements', list, { label: 'Physical inventory' })
+    .then(() => localStorage.setItem(STORAGE_KEYS.PHYSICAL_INVENTORY_SETTLEMENTS, JSON.stringify(list)));
 }
 function getActivePhysicalInventorySettlements() {
   const cycleId = activeCycle?.id;
@@ -8837,11 +9499,13 @@ function savePhysicalInventorySettlement(event) {
     systemQty:system, physicalQty:physical, differenceQty:difference, rate, adjustmentValue,
     pondAllocations, usageBasis:usageTotal > 0 ? 'Product usage by pond' : 'No pond usage found', date:new Date().toISOString()
   };
-  all.push(rec); savePhysicalInventorySettlements(all);
+  all.push(rec);
+  savePhysicalInventorySettlements(all).then(() => {
   renderPhysicalSettlementSavedList(); updatePhysicalSettlementPreview();
   document.getElementById('physicalInventorySettlementModal').dataset.editingId='';
   bcAlert(difference < -0.000001 ? `Physical shortage saved: ${Math.abs(difference).toFixed(3)} ${item.unit || ''}. ₹${Math.round(adjustmentValue).toLocaleString('en-IN')} recognized as physical inventory loss.` : difference > 0.000001 ? `Physical excess saved: ${difference.toFixed(3)} ${item.unit || ''}.` : 'Physical stock matched system stock.');
   renderInventoryAndPurchases(); renderFinanceOverview(); renderPondwisePnl();
+  }).catch(err => console.error('Physical inventory Firebase save failed:', err));
 }
 function getActivePhysicalSettlementAdjustmentForPond(pondId, productName) {
   const key = String(productName||'').trim().toLowerCase();
@@ -9195,15 +9859,52 @@ function setupSupplierAutocomplete() {
 }
 
 function promptDeleteCatalogueProduct(prodName) {
-  if (!confirm(`Are you sure you want to completely remove "${prodName}" from the catalogue and live inventory?`)) return;
+  const cycleLabel = `${activeCycle?.year || ''} • ${activeCycle?.crop || ''}`.trim();
+  if (!confirm(`Remove "${prodName}" from ${cycleLabel} inventory?\n\nThis deletes this crop's purchase bills, vendor returns and counted stock for this product only.\nFeed Entry, treatments, other crops and the product name in the catalogue stay.`)) return;
 
-  masterCatalogue = masterCatalogue.filter(item => item.name.toLowerCase() !== prodName.toLowerCase());
-  purchases = purchases.filter(p => p.name.toLowerCase() !== prodName.toLowerCase());
-  stockReturns = stockReturns.filter(r => r.name.toLowerCase() !== prodName.toLowerCase());
+  const key = String(prodName || '').trim().toLowerCase();
+  const cycleId = String(activeCycle?.id || '');
+  const toRemovePurchases = (Array.isArray(purchases) ? purchases : []).filter(p =>
+    String(p.name || '').trim().toLowerCase() === key &&
+    (typeof getActivePurchases === 'function' ? getActivePurchases().some(a => String(a.id || a.firestoreId) === String(p.id || p.firestoreId)) : true)
+  );
+  const toRemoveReturns = (Array.isArray(stockReturns) ? stockReturns : []).filter(r =>
+    String(r.name || '').trim().toLowerCase() === key &&
+    (typeof isRecordInActiveCycle === 'function' ? isRecordInActiveCycle(r) : true)
+  );
+  purchases = (Array.isArray(purchases) ? purchases : []).filter(p => !toRemovePurchases.some(x => String(x.id || x.firestoreId) === String(p.id || p.firestoreId)));
+  stockReturns = (Array.isArray(stockReturns) ? stockReturns : []).filter(r => !toRemoveReturns.some(x => String(x.id || x.firestoreId) === String(r.id || r.firestoreId)));
 
-  saveStorage();
-  renderAll();
-  bcAlert(`"${prodName}" has been removed from your catalogue.`);
+  const prefix = `${cycleId}|${key}`;
+  if (feedPhysicalStock && Object.prototype.hasOwnProperty.call(feedPhysicalStock, prefix)) delete feedPhysicalStock[prefix];
+  feedStockAdjustments = (Array.isArray(feedStockAdjustments) ? feedStockAdjustments : []).filter(a =>
+    !(getRecordCycleId(a) === cycleId && String(a.code || a.name || '').trim().toLowerCase() === key)
+  );
+  feedCropClosingAdjustments = (Array.isArray(feedCropClosingAdjustments) ? feedCropClosingAdjustments : []).filter(a =>
+    !(cycleIdFor(a.year || getRecordYear(a) || activeCycle.year, a.crop || 'Crop 1') === cycleId && String(a.code || a.name || '').trim().toLowerCase() === key)
+  );
+
+  const c1All = getCrop1ClosingPackedStockEntries();
+  const c1Remove = c1All.filter(e => String(e.cycleId || '') === cycleId && String(e.name || '').trim().toLowerCase() === key);
+  localStorage.setItem(STORAGE_KEYS.CROP1_CLOSING_PACKED_STOCK, JSON.stringify(c1All.filter(e => !c1Remove.includes(e))));
+  const c2All = getCrop2ClosingPackedStockEntries();
+  const c2Remove = c2All.filter(e => String(e.cycleId || '') === cycleId && String(e.name || '').trim().toLowerCase() === key);
+  localStorage.setItem(STORAGE_KEYS.CROP2_CLOSING_PACKED_STOCK, JSON.stringify(c2All.filter(e => !c2Remove.includes(e))));
+  const settlementsAll = getPhysicalInventorySettlements();
+  const settlementsRemove = settlementsAll.filter(r => String(r.cycleId || '') === cycleId && String(r.name || r.productName || '').trim().toLowerCase() === key);
+  localStorage.setItem(STORAGE_KEYS.PHYSICAL_INVENTORY_SETTLEMENTS, JSON.stringify(settlementsAll.filter(r => !settlementsRemove.includes(r))));
+
+  Promise.all([
+    deleteDocsFromCloud('purchases', toRemovePurchases),
+    deleteDocsFromCloud('stockReturns', toRemoveReturns),
+    deleteDocsFromCloud('crop1ClosingPackedStock', c1Remove),
+    deleteDocsFromCloud('crop2ClosingPackedStock', c2Remove),
+    deleteDocsFromCloud('physicalInventorySettlements', settlementsRemove)
+  ]).finally(() => {
+    saveStorage();
+    renderAll();
+    bcAlert(`"${prodName}" was removed from ${cycleLabel} inventory.`);
+  });
 }
 
 function editCatalogueProduct(oldName) {
@@ -9315,6 +10016,7 @@ function promptDeletePurchase(id) {
   dialogText.textContent = 'Deleting this purchase will deduct this stock from your live inventory.';
   confirmDialog.showModal();
 }
+window.promptDeletePurchase = promptDeletePurchase;
 
 function resetStockReturnForm() {
   if (returnIdInput) returnIdInput.value = '';
@@ -10214,6 +10916,7 @@ function renderStockReturnHistory() {
 }
 
 function setupEventListeners() {
+  document.getElementById('uploadAllToFirebaseBtn')?.addEventListener('click', uploadAllLocalFarmToFirebase);
   document.getElementById('stockTransferForm')?.addEventListener('submit', saveStockTransfer);
   document.getElementById('stockTransferCancelBtn')?.addEventListener('click', closeStockTransferModal);
   document.getElementById('closeStockTransferBtn')?.addEventListener('click', closeStockTransferModal);
@@ -10673,9 +11376,8 @@ function setupEventListeners() {
   }
 
   async function deleteLaptopCloudRecord(collectionName, recordId, records) {
-    if (!db) return;
     const firestoreId = resolveLaptopFirestoreId(collectionName, recordId, records);
-    await db.collection(collectionName).doc(firestoreId).delete();
+    await firebaseFirstDelete(collectionName, firestoreId);
   }
 
   if (confirmDialog) {
@@ -10694,38 +11396,39 @@ function setupEventListeners() {
               saveStorage();
               renderAll();
             })
-            .catch(err => console.error('Firestore sampling delete error:', err));
+            .catch(err => {
+              console.error('Firestore sampling delete error:', err);
+            });
         } else if (confirmedDeleteType === 'pond') {
-          const pondToDelete = ponds.find(p => String(p.id) === String(deleteTargetId));
+          const pondToDelete = ponds.find(p => String(p.id) === String(confirmedDeleteId));
           const pondNameToDelete = pondToDelete?.name || pondToDelete?.pondName || '';
-          ponds = ponds.filter(p => String(p.id) !== String(deleteTargetId));
-          samples = samples.filter(s => {
-            const refs = [s.pondId, s.pond, s.pondName].map(v => String(v ?? '').trim().toLowerCase());
-            return !refs.includes(String(deleteTargetId).trim().toLowerCase()) &&
-                   (!pondNameToDelete || !refs.includes(String(pondNameToDelete).trim().toLowerCase()));
-          });
-          harvests = harvests.filter(h => {
-            const refs = [h.pondId, h.pond, h.pondName].map(v => String(v ?? '').trim().toLowerCase());
-            return !refs.includes(String(deleteTargetId).trim().toLowerCase()) &&
-                   (!pondNameToDelete || !refs.includes(String(pondNameToDelete).trim().toLowerCase()));
-          });
-          treatments = treatments.filter(t => {
-            const refs = [t.pondId, t.pond, t.pondName].map(v => String(v ?? '').trim().toLowerCase());
-            return !refs.includes(String(deleteTargetId).trim().toLowerCase()) &&
-                   (!pondNameToDelete || !refs.includes(String(pondNameToDelete).trim().toLowerCase()));
-          });
-          // Re-render immediately after the local pond deletion so the remaining
-          // pond cards keep their own Edit/Delete actions. Do not wait for the
-          // asynchronous Firebase cascade to finish.
-          saveStorage();
-          renderAll();
-          if (db) {
-            deletePondFromFirebaseCascade(confirmedDeleteId, pondNameToDelete, pondToDelete)
-              .catch(err => {
-                console.error('Firestore pond cascade delete error:', err);
-                bcAlert('Pond cloud deletion failed. Please check the connection and try again.');
+          deletePondFromFirebaseCascade(confirmedDeleteId, pondNameToDelete, pondToDelete)
+            .then(() => {
+              ponds = ponds.filter(p => String(p.id) !== String(confirmedDeleteId));
+              samples = samples.filter(s => {
+                const refs = [s.pondId, s.pond, s.pondName].map(v => String(v ?? '').trim().toLowerCase());
+                return !refs.includes(String(confirmedDeleteId).trim().toLowerCase()) &&
+                       (!pondNameToDelete || !refs.includes(String(pondNameToDelete).trim().toLowerCase()));
               });
-          }
+              harvests = harvests.filter(h => {
+                const refs = [h.pondId, h.pond, h.pondName].map(v => String(v ?? '').trim().toLowerCase());
+                return !refs.includes(String(confirmedDeleteId).trim().toLowerCase()) &&
+                       (!pondNameToDelete || !refs.includes(String(pondNameToDelete).trim().toLowerCase()));
+              });
+              treatments = treatments.filter(t => {
+                const refs = [t.pondId, t.pond, t.pondName].map(v => String(v ?? '').trim().toLowerCase());
+                return !refs.includes(String(confirmedDeleteId).trim().toLowerCase()) &&
+                       (!pondNameToDelete || !refs.includes(String(pondNameToDelete).trim().toLowerCase()));
+              });
+              saveStorage();
+              renderAll();
+              notifyFirebaseDelete(true, 'Pond');
+            })
+            .catch(err => {
+              console.error('Firestore pond cascade delete error:', err);
+              setFirebaseStatus('disconnected');
+              notifyFirebaseDelete(false, 'Pond', err);
+            });
         } else if (confirmedDeleteType === 'feed') {
           deleteLaptopCloudRecord('feeds', confirmedDeleteId, feedEntries)
             .then(() => {
@@ -10763,18 +11466,22 @@ function setupEventListeners() {
               renderAll();
             })
             .catch(err => console.error('Firestore treatment delete error:', err));
-        } else if (deleteTargetType === 'purchase') {
-          // Keep local and Firebase deletion in sync. The Firebase listener can
-          // otherwise re-introduce a purchase that was deleted only locally.
-          if (db) {
-            db.collection('purchases').doc(String(deleteTargetId)).delete()
-              .catch(err => console.error('Firestore purchase delete error:', err));
-          }
-          purchases = purchases.filter(p => String(p.id) !== String(deleteTargetId));
-        } else if (deleteTargetType === 'stockReturn') {
-          stockReturns = stockReturns.filter(r => r.id !== deleteTargetId);
+        } else if (confirmedDeleteType === 'purchase') {
+          const removed = typeof removeLocalPurchase === 'function' ? removeLocalPurchase(confirmedDeleteId) : null;
+          saveStorage();
+          renderAll();
+          deleteDocsFromCloud('purchases', removed ? [removed, { id: confirmedDeleteId, firestoreId: removed.firestoreId }] : [{ id: confirmedDeleteId }])
+            .catch(err => console.error('Firestore purchase delete error:', err));
+        } else if (confirmedDeleteType === 'stockReturn') {
+          deleteLaptopCloudRecord('stockReturns', confirmedDeleteId, stockReturns)
+            .then(() => {
+              stockReturns = stockReturns.filter(r => String(r.id) !== String(confirmedDeleteId));
+              saveStorage();
+              renderAll();
+            })
+            .catch(err => console.error('Firestore stock return delete error:', err));
         }
-        if (!['sample','feed','harvest','treatment'].includes(confirmedDeleteType)) {
+        if (!['sample','feed','harvest','treatment','pond','purchase','stockReturn'].includes(confirmedDeleteType)) {
           saveStorage();
           renderAll();
         }
@@ -10873,17 +11580,11 @@ async function handleMultiItemPurchaseSubmit(e) {
       console.error('Purchase saved but UI refresh failed:', renderErr);
     }
     if (purchaseMessageEl) {
-      purchaseMessageEl.textContent = cloudSyncError
-        ? `✓ Purchase saved on this laptop. ⚠ Cloud sync failed: ${cloudSyncError?.message || cloudSyncError}`
-        : `✓ Purchase saved successfully (${records.length} item${records.length === 1 ? '' : 's'}).`;
-    }
-    if (cloudSyncError) {
-      bcAlert(`Purchase saved on this laptop, but Firebase sync failed.\n\n${cloudSyncError?.message || cloudSyncError}\n\nThe record has NOT been removed from this laptop.`);
+      purchaseMessageEl.textContent = `✓ Purchase saved to Firebase (${records.length} item${records.length === 1 ? '' : 's'}).`;
     }
   } catch (err) {
-    console.error('Purchase local save failed:', err);
+    console.error('Purchase Firebase save failed:', err);
     if (purchaseMessageEl) purchaseMessageEl.textContent = `⚠ Purchase could not be saved: ${err?.message || err}`;
-    bcAlert(`Purchase could not be saved.\n\n${err?.message || err}`);
   }
 }
 function getAvailableStockBeforeReturn(productName, category, year, crop, returnDate, excludeReturnId = '', additionalReturns = []) {
@@ -11810,15 +12511,18 @@ async function handlePondSubmit(e) {
   if (idx >= 0) ponds[idx].firestoreId = canonicalFirestoreId;
 
   try {
-    if (typeof db === 'undefined' || !db) throw new Error('Firebase is not connected.');
+    requireFirebaseConnection();
     await db.collection('ponds').doc(canonicalFirestoreId).set(pond, { merge: true });
     const oldFirestoreId = String(previousPond?.firestoreId || '').trim();
     if (oldFirestoreId && oldFirestoreId !== canonicalFirestoreId) {
       await db.collection('ponds').doc(oldFirestoreId).delete();
     }
+    setFirebaseStatus('connected');
+    notifyFirebaseSave(true, 'Pond');
   } catch (err) {
     console.error('Firestore pond write error:', err);
-    bcAlert('Pond could not be saved to Firebase. Local data was not changed.');
+    setFirebaseStatus('disconnected');
+    notifyFirebaseSave(false, 'Pond', err);
     return;
   }
 
@@ -11898,7 +12602,7 @@ window.editPond = editPond;
 window.promptDeletePond = promptDeletePond;
 
 async function deletePondFromFirebaseCascade(pondId, pondName, pondRecord) {
-  if (!db) return;
+  requireFirebaseConnection();
   const idKey = String(pondId ?? '').trim().toLowerCase();
   const nameKey = String(pondName ?? '').trim().toLowerCase();
   const collections = ['sampling', 'treatments', 'harvests'];
@@ -12644,6 +13348,8 @@ function saveFeedAdjustment() {
     entries.push({
       id: `fcc_${Date.now()}_${entries.length}`,
       crop,
+      year: activeCycle.year,
+      cycleId: activeCycle.id,
       code: row.code,
       company: row.company,
       physicalKg,
@@ -12661,8 +13367,7 @@ function saveFeedAdjustment() {
   });
   if (!entries.length) { bcAlert('Enter physical closing stock for at least one feed code.'); return false; }
 
-  if (isCorrection) {
-    const corrections = entries.map(entry => {
+  const corrections = isCorrection ? entries.map(entry => {
       const previous = previousMap[String(entry.code).trim().toLowerCase()];
       return {
         id: `fccr_${Date.now()}_${entry.code}`,
@@ -12676,19 +13381,28 @@ function saveFeedAdjustment() {
         correctionKg: entry.physicalKg - (previous ? Number(previous.physicalKg || 0) : 0),
         date: entry.date
       };
-    });
-    feedCropClosingAdjustmentHistory.push(...corrections);
-  }
+    }) : [];
 
-  feedCropClosingAdjustments = feedCropClosingAdjustments.filter(a => cycleIdFor(a.year || getRecordYear(a) || activeCycle.year, a.crop || 'Crop 1') !== activeCycle.id);
-  feedCropClosingAdjustments.push(...entries);
-  localStorage.setItem('bluecrest_feed_crop_closing_adjustments', JSON.stringify(feedCropClosingAdjustments));
-  localStorage.setItem('bluecrest_feed_crop_closing_adjustment_history', JSON.stringify(feedCropClosingAdjustmentHistory));
-  saveStorage();
-  renderInventoryAndPurchases();
-  document.getElementById('feedAdjustmentModal')?.close();
-  bcAlert(isCorrection ? `${crop} closing feed correction saved successfully.` : `${crop} closing feed reconciliation saved successfully.`);
-  return true;
+  return (async () => {
+    try {
+      await firebaseFirstBatchWrite('feedCropClosingAdjustments', entries);
+      if (corrections.length) {
+        await firebaseFirstBatchWrite('feedCropClosingAdjustmentHistory', corrections, { silent: true });
+      }
+    } catch (err) {
+      console.error('Feed closing Firebase save failed:', err);
+      return false;
+    }
+    if (corrections.length) feedCropClosingAdjustmentHistory.push(...corrections);
+    feedCropClosingAdjustments = feedCropClosingAdjustments.filter(a => cycleIdFor(a.year || getRecordYear(a) || activeCycle.year, a.crop || 'Crop 1') !== activeCycle.id);
+    feedCropClosingAdjustments.push(...entries);
+    localStorage.setItem('bluecrest_feed_crop_closing_adjustments', JSON.stringify(feedCropClosingAdjustments));
+    localStorage.setItem('bluecrest_feed_crop_closing_adjustment_history', JSON.stringify(feedCropClosingAdjustmentHistory));
+    saveStorage();
+    renderInventoryAndPurchases();
+    document.getElementById('feedAdjustmentModal')?.close();
+    return true;
+  })();
 }
 
 function getFeedInventoryRows(inventoryList) {
@@ -12783,7 +13497,7 @@ function getFeedInventoryRows(inventoryList) {
       fifoShortageValue: fifoClosing?.ok ? Number(fifoClosing.adjustmentValue || 0) : 0,
       closingCrop: latestClosing ? latestClosing.crop : null
     };
-  }).filter(feed => feed.purchasedQty !== 0 || feed.usedQty !== 0 || feed.closingBalance !== 0 || feed.physicalStockKg != null);
+  }).filter(feed => feed.purchasedQty !== 0 || feed.physicalStockKg != null);
 }
 
 
@@ -12988,8 +13702,8 @@ function getPositiveInventoryDisplayItems() {
   // Fertilizer + Medicine use the normal product inventory calculation.
   const nonFeedItems = baseInventory.filter(item =>
     item.category !== 'Feed' && (
-      Math.abs(Number(item.balanceStock || 0)) > 0.000001 ||
-      (isFeedSupplementProduct(item.name) && Number(item.totalUsedQty || 0) > 0.000001)
+      Math.abs(Number(item.openingStockQty || 0)) > 0.000001 ||
+      Math.abs(Number(item.totalPurchasedQty || 0)) > 0.000001
     )
   );
 
@@ -12998,7 +13712,10 @@ function getPositiveInventoryDisplayItems() {
   // value historical feed consumption or remaining system stock.
   const feedRows = getFeedInventoryRows(baseInventory);
   const feedItems = feedRows
-    .filter(row => Math.abs(Number(row.systemStockKg || 0)) > 0.000001)
+    .filter(row =>
+      Math.abs(Number(row.purchasedQty || 0)) > 0.000001 ||
+      Math.abs(Number(row.physicalStockKg || 0)) > 0.000001
+    )
     .map(row => {
       const codeKey = String(row.code || '').trim().toLowerCase();
       const baseItem = baseInventory.find(item =>
@@ -13092,7 +13809,7 @@ function renderInventoryAndPurchases() {
   };
 
   const inventoryForDisplayBase = isFeedInventoryOnly
-    ? inventoryList.filter(item => item.category === 'Feed' && Math.abs(Number(item.balanceStock || 0)) > 0.000001)
+    ? inventoryList.filter(item => item.category === 'Feed' && Math.abs(Number(item.totalPurchasedQty || 0)) > 0.000001)
     : nonZeroInventory.filter(matchesInventoryFilter);
 
   // The inventory search is a display selection, so the KPI cards must use the
@@ -13381,8 +14098,8 @@ function renderInventoryAndPurchases() {
     const cyclePurchases = getActivePurchases();
     const visiblePurchases = selectedCategories.size > 0
       ? cyclePurchases.filter(p => selectedCategories.has(String(p.category || '').trim()))
-      : (catVal !== 'ALL' && catVal !== 'IN_STOCK' && catVal !== 'LOW' && catVal !== 'NEGATIVE'
-          ? cyclePurchases.filter(p => p.category === catVal)
+      : (rawFilterValue !== 'ALL' && rawFilterValue !== 'IN_STOCK' && rawFilterValue !== 'LOW' && rawFilterValue !== 'NEGATIVE'
+          ? cyclePurchases.filter(p => p.category === rawFilterValue)
           : cyclePurchases);
     const monthPurchases = selectedPurchaseMonth
       ? visiblePurchases.filter(p => String(p.date || '').startsWith(selectedPurchaseMonth))
@@ -14697,7 +15414,7 @@ async function deleteFeedRecord(id) {
   );
   const firestoreId = String(existing?.firestoreId || existing?.id || id);
   try {
-    if (db) await db.collection('feeds').doc(firestoreId).delete();
+    await firebaseFirstDelete('feeds', firestoreId);
     feedEntries = feedEntries.filter(e =>
       String(e.id) !== String(id) &&
       String(e.firestoreId || '') !== String(id) &&
@@ -14710,7 +15427,6 @@ async function deleteFeedRecord(id) {
     renderAll();
   } catch (err) {
     console.error('Firestore feed delete error:', err);
-    bcAlert('Feed record could not be deleted. Please try again.');
   }
 }
 
@@ -15087,10 +15803,14 @@ function editStockTransfer(id) {
   if (!r) return;
   openStockTransferModal(id);
 }
-function deleteStockTransfer(id) {
+async function deleteStockTransfer(id) {
   if(!confirm('Delete this stock transfer?')) return;
-  if(db) db.collection('stockTransfers').doc(String(id)).delete().catch(err=>console.error('Firestore stock transfer delete error:',err));
-  stockTransfers=stockTransfers.filter(x=>String(x.id)!==String(id)); saveStorage(); renderAll();
+  try {
+    await firebaseFirstDelete('stockTransfers', String(id));
+    stockTransfers=stockTransfers.filter(x=>String(x.id)!==String(id)); saveStorage(); renderAll();
+  } catch (err) {
+    console.error('Firestore stock transfer delete error:', err);
+  }
 }
 
 
@@ -16350,8 +17070,10 @@ async function submitHarvestFormDirectly() {
   };
 
   try {
-    if (typeof db === 'undefined' || !db) throw new Error('Firebase is not connected.');
+    requireFirebaseConnection();
     await db.collection('harvests').doc(newHarvest.id).set(newHarvest, { merge: true });
+    setFirebaseStatus('connected');
+    notifyFirebaseSave(true, 'Harvest');
     const existingIndex = harvests.findIndex(h => String(h.id) === String(newHarvest.id));
     if (existingIndex >= 0) harvests[existingIndex] = { ...harvests[existingIndex], ...newHarvest };
     else harvests.push(newHarvest);
@@ -16383,7 +17105,8 @@ async function submitHarvestFormDirectly() {
     renderAll();
   } catch (err) {
     console.error('Firestore harvest write error:', err);
-    bcAlert('Harvest could not be saved to cloud data. Please try again.');
+    setFirebaseStatus('disconnected');
+    notifyFirebaseSave(false, 'Harvest', err);
   }
 }
 
@@ -16562,10 +17285,12 @@ function addBackupRows(moduleName, dataset, rows) {
 function exportCSV() {
   const headers = ['Date of Purchase','Crop','Invoice Number','Vendor','Category','Product Name','Company','Quantity','Unit','Pack Size','Stock Unit','Unit Price'];
   const rows = [headers];
-  const source = Array.isArray(purchases) ? purchases : [];
+  const cycleYear = Number(activeCycle?.year || new Date().getFullYear());
+  const cycleCrop = pondwiseNormaliseCrop(activeCycle?.crop || 'Crop 1');
+  const source = typeof getActivePurchases === 'function' ? getActivePurchases() : [];
   source.forEach(p => rows.push([
     p.date || '',
-    p.crop || '',
+    p.crop || cycleCrop,
     p.invoiceNo || '',
     p.supplier || '',
     p.category || '',
@@ -16582,12 +17307,13 @@ function exportCSV() {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = `bluecrest_purchase_${new Date().toISOString().slice(0,10)}.csv`;
+  const cropSlug = String(cycleCrop).replace(/\s+/g, '_');
+  link.download = `bluecrest_purchase_${cycleYear}_${cropSlug}_${new Date().toISOString().slice(0,10)}.csv`;
   document.body.appendChild(link);
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
-  bcAlert(`Purchase CSV exported successfully (${source.length} purchase item${source.length === 1 ? '' : 's'}).`);
+  bcAlert(`Purchase CSV exported for ${cycleYear} • ${cycleCrop} (${source.length} purchase item${source.length === 1 ? '' : 's'}).`);
 }
 
 function handleImportCSV(e) {
@@ -16622,7 +17348,7 @@ function handleImportCSV(e) {
   const keyProduct = (name, company, category) => keyName(name); // Product identity follows the app's existing catalogue/inventory name matching.
 
   const reader = new FileReader();
-  reader.onload = event => {
+  reader.onload = async event => {
     try {
       const parsed = csvParse(event.target.result || '');
       if (!parsed.length) throw new Error('Empty CSV.');
@@ -16634,6 +17360,26 @@ function handleImportCSV(e) {
 
       const rows = parsed.slice(1).filter(r => r.some(v => clean(v) !== ''));
       if (!rows.length) throw new Error('No purchase records found in the CSV.');
+
+      const cycleYear = Number(activeCycle?.year || new Date().getFullYear());
+      const cycleCrop = pondwiseNormaliseCrop(activeCycle?.crop || 'Crop 1');
+      const cycleId = typeof cycleIdFor === 'function' ? cycleIdFor(cycleYear, cycleCrop) : '';
+
+      const fileCrops = [...new Set(rows.map(r => {
+        const raw = clean(r[idx['crop']]);
+        return raw ? pondwiseNormaliseCrop(raw) : '';
+      }).filter(Boolean))];
+      const mismatchedCrops = fileCrops.filter(crop => crop !== cycleCrop);
+      if (mismatchedCrops.length) {
+        const fileCropLabel = fileCrops.join(', ');
+        const continueImport = confirm(
+          `This Purchase CSV is for ${fileCropLabel}, but the app is on ${cycleYear} • ${cycleCrop}.\n\n${rows.length} purchase line${rows.length === 1 ? '' : 's'} would be imported into ${cycleYear} • ${cycleCrop}. The Crop column in the file will not be used.\n\nOK = import into ${cycleYear} • ${cycleCrop} anyway.\nCancel = stop. Nothing will be saved. Switch Year / Crop at the top first if this file belongs to another crop.`
+        );
+        if (!continueImport) {
+          bcAlert(`Purchase CSV import cancelled.\n\nFile crop: ${fileCropLabel}\nSelected in app: ${cycleYear} • ${cycleCrop}`);
+          return;
+        }
+      }
 
       const incoming = rows.map((r, n) => {
         const get = k => clean(r[idx[k]]);
@@ -16654,10 +17400,48 @@ function handleImportCSV(e) {
         const pack = Number.isFinite(packSize) && packSize > 0 ? packSize : (bagUnit && feed ? 25 : 1);
         const total = feed && bagUnit && stockUnit.toLowerCase() === 'kg' ? qty * pack * price : qty * price;
         const date = get('date of purchase') || new Date().toISOString().slice(0,10);
-        const crop = get('crop') || (typeof activeCycle !== 'undefined' ? activeCycle.crop : 'Crop 1') || 'Crop 1';
-        const year = Number((date.match(/\b(20\d{2})\b/) || [])[1] || (typeof activeCycle !== 'undefined' ? activeCycle.year : new Date().getFullYear()));
-        return { date, year, crop, cycleId: typeof cycleIdFor === 'function' ? cycleIdFor(year, crop) : '', invoiceNo:get('invoice number'), supplier:get('vendor'), category, name:get('product name'), company, qty, unit, packSize:pack, stockUnit, unitPrice:price, invoiceUnitPrice:feed ? price : null, finalUnitPrice:feed ? price : null, totalAmount:total };
+        // Always import into the Year + Crop selected in the top bar.
+        // A different crop/year in the file is ignored so other cycles are not changed.
+        return { date, year: cycleYear, crop: cycleCrop, cycleId, invoiceNo:get('invoice number'), supplier:get('vendor'), category, name:get('product name'), company, qty, unit, packSize:pack, stockUnit, unitPrice:price, invoiceUnitPrice:feed ? price : null, finalUnitPrice:feed ? price : null, totalAmount:total };
       });
+
+      const normalisePurchaseDate = v => {
+        const s = clean(v);
+        const iso = s.match(/^(\d{4}-\d{2}-\d{2})/);
+        if (iso) return iso[1];
+        const dmy = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
+        if (dmy) return `${dmy[3]}-${String(dmy[2]).padStart(2,'0')}-${String(dmy[1]).padStart(2,'0')}`;
+        return s;
+      };
+      const duplicateKey = p => [
+        normalisePurchaseDate(p?.date),
+        keyName(p?.name),
+        keyName(p?.supplier)
+      ].join('|');
+      const existingActive = typeof getActivePurchases === 'function' ? getActivePurchases() : [];
+      let importMode = 'add';
+      if (existingActive.length) {
+        importMode = await promptPurchaseCsvImportMode(cycleYear, cycleCrop, existingActive.length, incoming.length);
+        if (importMode !== 'replace' && importMode !== 'add') {
+          bcAlert(`Purchase CSV import cancelled. No purchases were changed for ${cycleYear} • ${cycleCrop}.`);
+          return;
+        }
+      }
+      if (importMode === 'add') {
+        const existingKeys = new Set(existingActive.map(duplicateKey).filter(k => k && k !== '||'));
+        const duplicateIncoming = incoming.filter(r => existingKeys.has(duplicateKey(r)));
+        if (duplicateIncoming.length) {
+          const preview = duplicateIncoming.slice(0, 8).map(r => `${normalisePurchaseDate(r.date)} • ${r.name} • ${r.supplier} • qty ${r.qty}`).join('\n');
+          const extra = duplicateIncoming.length > 8 ? `\n…and ${duplicateIncoming.length - 8} more` : '';
+          const allowDuplicates = confirm(
+            `This CSV has ${duplicateIncoming.length} purchase${duplicateIncoming.length === 1 ? '' : 's'} with the same date, same product and same vendor as an existing ${cycleYear} • ${cycleCrop} entry.\n\n${preview}${extra}\n\nOK = import anyway as NEW extra line(s). Quantity will add on top of the old entry.\nCancel = stop the whole import. Nothing will be saved.`
+          );
+          if (!allowDuplicates) {
+            bcAlert(`Purchase CSV import cancelled. No purchases were added to ${cycleYear} • ${cycleCrop}.`);
+            return;
+          }
+        }
+      }
 
       const existingVendorKeys = new Set((Array.isArray(vendors) ? vendors : []).map(v => keyName(v?.name)).filter(Boolean));
       const newVendors = [];
@@ -16688,7 +17472,25 @@ function handleImportCSV(e) {
       });
 
       const imported = incoming.map((r, i) => ({ id:`pur_${Date.now()}_${i}_${Math.random().toString(36).slice(2,8)}`, ...r }));
-      purchases = imported.concat(Array.isArray(purchases) ? purchases : []);
+      const replacedIds = new Set(existingActive.map(p => String(p?.id || p?.firestoreId || '')).filter(Boolean));
+      const otherPurchases = (Array.isArray(purchases) ? purchases : []).filter(p => {
+        const id = String(p?.id || p?.firestoreId || '');
+        if (id && replacedIds.has(id)) return false;
+        const py = typeof getPurchaseYear === 'function' ? getPurchaseYear(p) : Number(p?.year || p?.cropYear || String(p?.date || '').slice(0,4) || 0);
+        const pc = typeof getPurchaseCrop === 'function' ? getPurchaseCrop(p) : pondwiseNormaliseCrop(p?.crop || p?.cropCycle || 'Crop 1');
+        return !(py === cycleYear && pc === cycleCrop);
+      });
+      if (importMode === 'replace' && existingActive.length && typeof deletePurchaseDocsFromCloud === 'function') {
+        await deletePurchaseDocsFromCloud(existingActive);
+      }
+      purchases = importMode === 'replace' ? imported.concat(otherPurchases) : imported.concat(existingActive, otherPurchases);
+      try {
+        if (typeof firebaseFirstBatchWrite === 'function') {
+          await firebaseFirstBatchWrite('purchases', imported, { silent: true, label: 'Purchase CSV' });
+        }
+      } catch (cloudErr) {
+        console.warn('Purchase CSV saved on this computer; Cloud write skipped:', cloudErr);
+      }
       saveStorage();
       if (typeof ensureVendorMaster === 'function') ensureVendorMaster();
       if (typeof renderInventoryAndPurchases === 'function') renderInventoryAndPurchases();
@@ -16696,7 +17498,10 @@ function handleImportCSV(e) {
       if (typeof populatePurchaseVendorSelect === 'function') populatePurchaseVendorSelect('');
       if (typeof populateStatementVendorsDropdown === 'function') populateStatementVendorsDropdown();
       if (typeof renderAll === 'function') { try { renderAll(); } catch (renderErr) { console.warn('Purchase import saved; dashboard refresh had an error:', renderErr); } }
-      bcAlert(`Purchase CSV imported successfully.\n\n${imported.length} purchase item${imported.length === 1 ? '' : 's'} imported${newVendors.length ? `\n${newVendors.length} new vendor${newVendors.length === 1 ? '' : 's'} added` : ''}${newProducts.length ? `\n${newProducts.length} new product${newProducts.length === 1 ? '' : 's'} added` : ''}.`);
+      const modeNote = importMode === 'replace'
+        ? `\nReplaced the previous ${existingActive.length} purchase line${existingActive.length === 1 ? '' : 's'} for this crop. Inventory qty is now opening + these bills − usage − vendor returns.`
+        : '';
+      bcAlert(`Purchase CSV imported into ${cycleYear} • ${cycleCrop}.\n\n${imported.length} purchase item${imported.length === 1 ? '' : 's'} imported. Other crops were not changed.${modeNote}${newVendors.length ? `\n${newVendors.length} new vendor${newVendors.length === 1 ? '' : 's'} added` : ''}${newProducts.length ? `\n${newProducts.length} new product${newProducts.length === 1 ? '' : 's'} added` : ''}.`);
     } catch (err) {
       console.error('Purchase CSV import error:', err);
       bcAlert(`Unable to import Purchase CSV: ${err.message}`);
@@ -16859,7 +17664,7 @@ document.addEventListener('change', (e) => {
       if(editId) purchases=purchases.filter(p=>String(p.id)!==editId);
       purchases=records.concat(purchases);
       localStorage.setItem(STORAGE_KEYS.PURCHASES,JSON.stringify(purchases));
-      if(typeof renderInventoryAndPurchases==='function') renderInventoryAndPurchases();
+      if(typeof renderInventoryAndPurchases==='function') { try { renderInventoryAndPurchases(); } catch(renderErr) { console.warn('Purchase saved; inventory refresh had an error:', renderErr); } }
       if(typeof renderAll==='function') { try { renderAll(); } catch(renderErr) { console.warn('Purchase saved; dashboard refresh had an error:',renderErr); } }
       if(msg) msg.textContent=`✓ Purchase saved successfully (${records.length} item${records.length===1?'':'s'}).`;
       if(btn){btn.disabled=true;setTimeout(()=>btn.disabled=false,800);}
@@ -17019,7 +17824,18 @@ document.addEventListener('DOMContentLoaded', () => {
     return arr.some(h=>harvestCycleId(h)===pcid && pondIdOf(h).toLowerCase()===String(p.id).toLowerCase() && ['full','final harvest'].includes(String(h.type||h.harvestType||'').trim().toLowerCase()));
   }
   function fullHarvestIsSupersededByReactivation(p,cid,h){ const lock=effectivePondLock(cid,p.id); return !!(lock&&lock.closed===false&&lock.reactivatedAt); }
-  async function cloudSet(col,id,data){ if(typeof db!=='undefined'&&db) await db.collection(col).doc(String(id)).set(data,{merge:true}); }
+  async function cloudSet(col,id,data){
+    try {
+      requireFirebaseConnection();
+      await db.collection(col).doc(String(id)).set(data,{merge:true});
+      setFirebaseStatus('connected');
+      notifyFirebaseSave(true, firebaseCollectionLabel(col));
+    } catch (err) {
+      setFirebaseStatus('disconnected');
+      notifyFirebaseSave(false, firebaseCollectionLabel(col), err);
+      throw err;
+    }
+  }
   function bcEsc(v){ return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;').replace(/'/g,'&#39;'); }
   function bcAuditDate(v){
     if(!v) return '—';
@@ -17856,12 +18672,18 @@ document.addEventListener('DOMContentLoaded', initHarvestDecision);
     document.body.appendChild(host);
     return host;
   }
-  window.bcNotify=function(message){
+  window.bcNotify=function(message, type){
     const item=document.createElement('div');
     item.textContent=String(message ?? '');
-    item.style.cssText='padding:11px 16px;border:1px solid #dbe5ef;border-radius:12px;background:#fff;color:#1e293b;box-shadow:0 10px 28px rgba(15,23,42,.16);font:600 14px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif';
+    const ok = type === 'success';
+    const fail = type === 'error';
+    item.style.cssText = ok
+      ? 'padding:11px 16px;border:1px solid #bbf7d0;border-radius:12px;background:#f0fdf4;color:#166534;box-shadow:0 10px 28px rgba(15,23,42,.16);font:600 14px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif'
+      : fail
+      ? 'padding:11px 16px;border:1px solid #fecaca;border-radius:12px;background:#fef2f2;color:#991b1b;box-shadow:0 10px 28px rgba(15,23,42,.16);font:600 14px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif'
+      : 'padding:11px 16px;border:1px solid #dbe5ef;border-radius:12px;background:#fff;color:#1e293b;box-shadow:0 10px 28px rgba(15,23,42,.16);font:600 14px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif';
     ensureHost().appendChild(item);
-    setTimeout(()=>item.remove(),4200);
+    setTimeout(()=>item.remove(),5200);
   };
   window.bcAlert=window.bcNotify;
 })();
