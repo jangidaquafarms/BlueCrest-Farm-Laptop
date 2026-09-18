@@ -13994,8 +13994,8 @@ function renderInventoryAndPurchases() {
     const cyclePurchases = getActivePurchases();
     const visiblePurchases = selectedCategories.size > 0
       ? cyclePurchases.filter(p => selectedCategories.has(String(p.category || '').trim()))
-      : (catVal !== 'ALL' && catVal !== 'IN_STOCK' && catVal !== 'LOW' && catVal !== 'NEGATIVE'
-          ? cyclePurchases.filter(p => p.category === catVal)
+      : (rawFilterValue !== 'ALL' && rawFilterValue !== 'IN_STOCK' && rawFilterValue !== 'LOW' && rawFilterValue !== 'NEGATIVE'
+          ? cyclePurchases.filter(p => p.category === rawFilterValue)
           : cyclePurchases);
     const monthPurchases = selectedPurchaseMonth
       ? visiblePurchases.filter(p => String(p.date || '').startsWith(selectedPurchaseMonth))
@@ -17544,7 +17544,7 @@ document.addEventListener('change', (e) => {
       if(editId) purchases=purchases.filter(p=>String(p.id)!==editId);
       purchases=records.concat(purchases);
       localStorage.setItem(STORAGE_KEYS.PURCHASES,JSON.stringify(purchases));
-      if(typeof renderInventoryAndPurchases==='function') renderInventoryAndPurchases();
+      if(typeof renderInventoryAndPurchases==='function') { try { renderInventoryAndPurchases(); } catch(renderErr) { console.warn('Purchase saved; inventory refresh had an error:', renderErr); } }
       if(typeof renderAll==='function') { try { renderAll(); } catch(renderErr) { console.warn('Purchase saved; dashboard refresh had an error:',renderErr); } }
       if(msg) msg.textContent=`✓ Purchase saved successfully (${records.length} item${records.length===1?'':'s'}).`;
       if(btn){btn.disabled=true;setTimeout(()=>btn.disabled=false,800);}
