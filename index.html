@@ -5991,6 +5991,17 @@ document.addEventListener('click', function(e){ const m=document.getElementById(
     </form>
   </dialog>
 
+  <dialog id="purchaseCsvImportModeDialog" class="clinical-modal" style="width:min(640px,calc(100% - 2rem));">
+    <h3>Rebuild this crop from Purchase CSV?</h3>
+    <p id="purchaseCsvImportModeText" style="white-space:pre-wrap;"></p>
+    <p style="color:var(--text-muted);font-size:.85rem;">Do not erase Inventory. Qty is calculated from purchase bills minus usage and vendor returns. Feed Entry, treatments and closing stock stay as they are.</p>
+    <form method="dialog" class="modal-actions" style="flex-wrap:wrap;">
+      <button value="cancel" class="pill-btn secondary-btn">Cancel import</button>
+      <button value="add" class="pill-btn secondary-btn">Keep old bills and add CSV</button>
+      <button value="replace" class="pill-btn action-blue">Replace this crop's purchases</button>
+    </form>
+  </dialog>
+
   <dialog id="vendorStatementDialog" class="vendor-statement-dialog">
     <div class="statement-print-wrapper" id="statementPrintWrapper">
       <div class="statement-brand-header">
@@ -7846,16 +7857,54 @@ async function commitFirestoreRecords(collectionName, records) {
 
 async function firebaseFirstDelete(collectionName, firestoreId, options = {}) {
   const label = options.label || firebaseCollectionLabel(collectionName);
+  const silent = options.silent === true;
   try {
     requireFirebaseConnection();
     await db.collection(collectionName).doc(String(firestoreId)).delete();
     setFirebaseStatus('connected');
-    notifyFirebaseDelete(true, label);
+    if (!silent) notifyFirebaseDelete(true, label);
   } catch (err) {
     setFirebaseStatus('disconnected');
-    notifyFirebaseDelete(false, label, err);
+    if (!silent) notifyFirebaseDelete(false, label, err);
     throw err;
   }
+}
+
+async function deletePurchaseDocsFromCloud(list) {
+  const ids = [...new Set((Array.isArray(list) ? list : []).map(p => String(p?.firestoreId || p?.id || '').trim()).filter(Boolean))];
+  if (!ids.length || typeof db === 'undefined' || !db) return;
+  try {
+    requireFirebaseConnection();
+    for (let i = 0; i < ids.length; i += 400) {
+      const batch = db.batch();
+      ids.slice(i, i + 400).forEach(id => batch.delete(db.collection('purchases').doc(id)));
+      await batch.commit();
+    }
+    setFirebaseStatus('connected');
+  } catch (err) {
+    console.warn('Could not delete replaced purchase bills from Cloud:', err);
+  }
+}
+
+function promptPurchaseCsvImportMode(cycleYear, cycleCrop, existingCount, incomingCount) {
+  return new Promise(resolve => {
+    const dlg = document.getElementById('purchaseCsvImportModeDialog');
+    const text = document.getElementById('purchaseCsvImportModeText');
+    const msg = `${cycleYear} • ${cycleCrop} already has ${existingCount} purchase line${existingCount === 1 ? '' : 's'}.\n\nThis CSV has ${incomingCount} purchase line${incomingCount === 1 ? '' : 's'}.\n\nReplace = erase only this crop's purchase bills, then load the CSV. Inventory qty will recalculate. Other crops, Feed Entry, treatments and closing stock are not erased.\nAdd = keep the old bills and import the CSV as extra lines (qty will add on top).`;
+    if (text) text.textContent = msg;
+    if (!dlg || typeof dlg.showModal !== 'function') {
+      const replace = confirm(`${msg}\n\nOK = REPLACE this crop's purchase bills with the CSV.\nCancel = stop the import.`);
+      resolve(replace ? 'replace' : 'cancel');
+      return;
+    }
+    const onClose = () => {
+      dlg.removeEventListener('close', onClose);
+      const value = dlg.returnValue;
+      resolve(value === 'replace' || value === 'add' ? value : 'cancel');
+    };
+    dlg.addEventListener('close', onClose);
+    dlg.showModal();
+  });
 }
 
 function isNonEmptyFarmList(value) {
@@ -17052,7 +17101,7 @@ function handleImportCSV(e) {
   const keyProduct = (name, company, category) => keyName(name); // Product identity follows the app's existing catalogue/inventory name matching.
 
   const reader = new FileReader();
-  reader.onload = event => {
+  reader.onload = async event => {
     try {
       const parsed = csvParse(event.target.result || '');
       if (!parsed.length) throw new Error('Empty CSV.');
@@ -17107,17 +17156,27 @@ function handleImportCSV(e) {
         keyName(p?.supplier)
       ].join('|');
       const existingActive = typeof getActivePurchases === 'function' ? getActivePurchases() : [];
-      const existingKeys = new Set(existingActive.map(duplicateKey).filter(k => k && k !== '||'));
-      const duplicateIncoming = incoming.filter(r => existingKeys.has(duplicateKey(r)));
-      if (duplicateIncoming.length) {
-        const preview = duplicateIncoming.slice(0, 8).map(r => `${normalisePurchaseDate(r.date)} • ${r.name} • ${r.supplier} • qty ${r.qty}`).join('\n');
-        const extra = duplicateIncoming.length > 8 ? `\n…and ${duplicateIncoming.length - 8} more` : '';
-        const allowDuplicates = confirm(
-          `This CSV has ${duplicateIncoming.length} purchase${duplicateIncoming.length === 1 ? '' : 's'} with the same date, same product and same vendor as an existing ${cycleYear} • ${cycleCrop} entry.\n\n${preview}${extra}\n\nOK = import anyway as NEW extra line(s). Quantity will add on top of the old entry.\nCancel = stop the whole import. Nothing will be saved.`
-        );
-        if (!allowDuplicates) {
-          bcAlert(`Purchase CSV import cancelled. No purchases were added to ${cycleYear} • ${cycleCrop}.`);
+      let importMode = 'add';
+      if (existingActive.length) {
+        importMode = await promptPurchaseCsvImportMode(cycleYear, cycleCrop, existingActive.length, incoming.length);
+        if (importMode !== 'replace' && importMode !== 'add') {
+          bcAlert(`Purchase CSV import cancelled. No purchases were changed for ${cycleYear} • ${cycleCrop}.`);
           return;
+        }
+      }
+      if (importMode === 'add') {
+        const existingKeys = new Set(existingActive.map(duplicateKey).filter(k => k && k !== '||'));
+        const duplicateIncoming = incoming.filter(r => existingKeys.has(duplicateKey(r)));
+        if (duplicateIncoming.length) {
+          const preview = duplicateIncoming.slice(0, 8).map(r => `${normalisePurchaseDate(r.date)} • ${r.name} • ${r.supplier} • qty ${r.qty}`).join('\n');
+          const extra = duplicateIncoming.length > 8 ? `\n…and ${duplicateIncoming.length - 8} more` : '';
+          const allowDuplicates = confirm(
+            `This CSV has ${duplicateIncoming.length} purchase${duplicateIncoming.length === 1 ? '' : 's'} with the same date, same product and same vendor as an existing ${cycleYear} • ${cycleCrop} entry.\n\n${preview}${extra}\n\nOK = import anyway as NEW extra line(s). Quantity will add on top of the old entry.\nCancel = stop the whole import. Nothing will be saved.`
+          );
+          if (!allowDuplicates) {
+            bcAlert(`Purchase CSV import cancelled. No purchases were added to ${cycleYear} • ${cycleCrop}.`);
+            return;
+          }
         }
       }
 
@@ -17150,12 +17209,25 @@ function handleImportCSV(e) {
       });
 
       const imported = incoming.map((r, i) => ({ id:`pur_${Date.now()}_${i}_${Math.random().toString(36).slice(2,8)}`, ...r }));
+      const replacedIds = new Set(existingActive.map(p => String(p?.id || p?.firestoreId || '')).filter(Boolean));
       const otherPurchases = (Array.isArray(purchases) ? purchases : []).filter(p => {
-        const py = Number(p?.year || p?.cropYear || String(p?.date || '').slice(0,4) || 0);
-        const pc = pondwiseNormaliseCrop(p?.crop || p?.cropCycle || 'Crop 1');
+        const id = String(p?.id || p?.firestoreId || '');
+        if (id && replacedIds.has(id)) return false;
+        const py = typeof getPurchaseYear === 'function' ? getPurchaseYear(p) : Number(p?.year || p?.cropYear || String(p?.date || '').slice(0,4) || 0);
+        const pc = typeof getPurchaseCrop === 'function' ? getPurchaseCrop(p) : pondwiseNormaliseCrop(p?.crop || p?.cropCycle || 'Crop 1');
         return !(py === cycleYear && pc === cycleCrop);
       });
-      purchases = imported.concat(existingActive, otherPurchases);
+      if (importMode === 'replace' && existingActive.length && typeof deletePurchaseDocsFromCloud === 'function') {
+        await deletePurchaseDocsFromCloud(existingActive);
+      }
+      purchases = importMode === 'replace' ? imported.concat(otherPurchases) : imported.concat(existingActive, otherPurchases);
+      try {
+        if (typeof firebaseFirstBatchWrite === 'function') {
+          await firebaseFirstBatchWrite('purchases', imported, { silent: true, label: 'Purchase CSV' });
+        }
+      } catch (cloudErr) {
+        console.warn('Purchase CSV saved on this computer; Cloud write skipped:', cloudErr);
+      }
       saveStorage();
       if (typeof ensureVendorMaster === 'function') ensureVendorMaster();
       if (typeof renderInventoryAndPurchases === 'function') renderInventoryAndPurchases();
@@ -17163,7 +17235,10 @@ function handleImportCSV(e) {
       if (typeof populatePurchaseVendorSelect === 'function') populatePurchaseVendorSelect('');
       if (typeof populateStatementVendorsDropdown === 'function') populateStatementVendorsDropdown();
       if (typeof renderAll === 'function') { try { renderAll(); } catch (renderErr) { console.warn('Purchase import saved; dashboard refresh had an error:', renderErr); } }
-      bcAlert(`Purchase CSV imported into ${cycleYear} • ${cycleCrop}.\n\n${imported.length} purchase item${imported.length === 1 ? '' : 's'} imported. Other crops were not changed.${newVendors.length ? `\n${newVendors.length} new vendor${newVendors.length === 1 ? '' : 's'} added` : ''}${newProducts.length ? `\n${newProducts.length} new product${newProducts.length === 1 ? '' : 's'} added` : ''}.`);
+      const modeNote = importMode === 'replace'
+        ? `\nReplaced the previous ${existingActive.length} purchase line${existingActive.length === 1 ? '' : 's'} for this crop. Inventory qty is now opening + these bills − usage − vendor returns.`
+        : '';
+      bcAlert(`Purchase CSV imported into ${cycleYear} • ${cycleCrop}.\n\n${imported.length} purchase item${imported.length === 1 ? '' : 's'} imported. Other crops were not changed.${modeNote}${newVendors.length ? `\n${newVendors.length} new vendor${newVendors.length === 1 ? '' : 's'} added` : ''}${newProducts.length ? `\n${newProducts.length} new product${newProducts.length === 1 ? '' : 's'} added` : ''}.`);
     } catch (err) {
       console.error('Purchase CSV import error:', err);
       bcAlert(`Unable to import Purchase CSV: ${err.message}`);
