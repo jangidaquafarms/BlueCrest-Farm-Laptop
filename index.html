@@ -7273,25 +7273,73 @@ function getPurchaseYear(p) {
   return 0;
 }
 function getPurchaseCrop(p) {
+  const cid = String(p?.cycleId || '').toLowerCase();
+  // cycleId is the original import/save slot. Prefer it over crop, which may have
+  // been overwritten when the top-bar crop was changed.
+  if (cid.includes('crop 1') || cid.includes('crop1') || cid.endsWith('|c1')) return 'Crop 1';
+  if (cid.includes('crop 2') || cid.includes('crop2') || cid.endsWith('|c2')) return 'Crop 2';
   const explicit = String(p?.crop || p?.cropCycle || '').trim();
   if (explicit) return pondwiseNormaliseCrop(explicit);
-  const cid = String(p?.cycleId || '').toLowerCase();
-  if (cid.includes('crop 2') || cid.includes('crop2') || cid.endsWith('|c2')) return 'Crop 2';
-  if (cid.includes('crop 1') || cid.includes('crop1') || cid.endsWith('|c1')) return 'Crop 1';
-  // Untagged legacy bills belong to Crop 1. Never inherit the crop currently
-  // selected in the top bar, or Crop 2 would show Crop 1 purchases.
   return 'Crop 1';
+}
+function purchaseDedupeKey(p) {
+  return [
+    String(p?.date || p?.purchaseDate || '').slice(0, 10),
+    String(p?.invoiceNo || '').trim().toLowerCase(),
+    String(p?.supplier || '').trim().toLowerCase(),
+    String(p?.name || '').trim().toLowerCase(),
+    String(p?.qty ?? ''),
+    String(p?.unitPrice ?? '')
+  ].join('|');
+}
+function retagPurchaseToCrop(p, year, crop) {
+  const nextCrop = pondwiseNormaliseCrop(crop || 'Crop 1');
+  const nextYear = Number(year || getPurchaseYear(p) || activeCycle?.year || new Date().getFullYear());
+  p.crop = nextCrop;
+  p.cropCycle = nextCrop;
+  p.year = nextYear;
+  p.cycleId = cycleIdFor(nextYear, nextCrop);
+  return p;
+}
+function repairPurchaseCropAssignments() {
+  const list = Array.isArray(purchases) ? purchases : [];
+  if (!list.length) return false;
+  let changed = false;
+  const years = [...new Set(list.map(p => getPurchaseYear(p) || Number(activeCycle?.year || 0)).filter(y => y >= 2000))];
+  years.forEach(year => {
+    const crop1 = list.filter(p => getPurchaseYear(p) === year && getPurchaseCrop(p) === 'Crop 1');
+    const crop2 = list.filter(p => getPurchaseYear(p) === year && getPurchaseCrop(p) === 'Crop 2');
+    if (crop2.length && !crop1.length) {
+      crop2.forEach(p => { retagPurchaseToCrop(p, year, 'Crop 1'); changed = true; });
+      return;
+    }
+    if (crop1.length && crop2.length) {
+      const keys = new Set(crop1.map(purchaseDedupeKey));
+      crop2.forEach(p => {
+        if (keys.has(purchaseDedupeKey(p))) {
+          retagPurchaseToCrop(p, year, 'Crop 1');
+          changed = true;
+        }
+      });
+    }
+  });
+  if (changed) {
+    const seen = new Set();
+    purchases = list.filter(p => {
+      const id = String(p?.id || p?.firestoreId || '');
+      const key = id || purchaseDedupeKey(p);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+  return changed;
 }
 function getActivePurchases() {
   const cycleYear = Number(activeCycle?.year || new Date().getFullYear());
   const cycleCrop = pondwiseNormaliseCrop(activeCycle?.crop || 'Crop 1');
-  const expectedId = String(typeof cycleIdFor === 'function' ? cycleIdFor(cycleYear, cycleCrop) : `${cycleYear}|${String(cycleCrop).toLowerCase()}`).toLowerCase();
   const list = Array.isArray(purchases) ? purchases : [];
-  return list.filter(p => {
-    const cid = String(p?.cycleId || '').trim().toLowerCase();
-    if (cid) return cid === expectedId;
-    return getPurchaseYear(p) === cycleYear && getPurchaseCrop(p) === cycleCrop;
-  });
+  return list.filter(p => getPurchaseYear(p) === cycleYear && getPurchaseCrop(p) === cycleCrop);
 }
 function getActiveStockReturns() { return stockReturns.filter(isRecordInActiveCycle); }
 function getActiveVendorTransactions() { return vendorTransactions.filter(isRecordInActiveCycle); }
@@ -7342,6 +7390,10 @@ function setActiveCycle(year, crop) {
   const found=farmCycles.find(c=>c.year===Number(year)&&c.crop.toLowerCase()===String(crop).toLowerCase());
   if(!found) return;
   activeCycle={...found}; localStorage.setItem(STORAGE_KEYS.ACTIVE_CYCLE,JSON.stringify(activeCycle));
+  if (typeof repairPurchaseCropAssignments === 'function' && repairPurchaseCropAssignments()) {
+    try { localStorage.setItem(STORAGE_KEYS.PURCHASES, JSON.stringify(purchases)); } catch (e) {}
+    if (typeof saveStorage === 'function') saveStorage();
+  }
   renderGlobalCycleSelector(); renderAll();
 }
 function renderCycleManagerList() {
@@ -7737,6 +7789,7 @@ function loadAndEnsureData() {
                 const recovered = localBefore.filter(p => !isPurchaseSuppressed(p));
                 if (recovered.length) purchases = recovered.map((p, i) => normalisePurchaseRecord(p, i));
               }
+              if (typeof repairPurchaseCropAssignments === 'function') repairPurchaseCropAssignments();
               try { localStorage.setItem(STORAGE_KEYS.PURCHASES, JSON.stringify(purchases)); } catch (e) { console.warn('Purchase local cache update failed:', e); }
               if (typeof renderAll === 'function') renderAll();
           }, err => console.error('Firestore purchase listener error:', err));
@@ -7841,6 +7894,7 @@ function loadAndEnsureData() {
   if (!vendorTransactions || vendorTransactions.length === 0) vendorTransactions = [...defaultVendorTransactions];
 
   purchases = (Array.isArray(purchases) ? purchases : []).map((p, index) => normalisePurchaseRecord(p, index));
+  if (typeof repairPurchaseCropAssignments === 'function') repairPurchaseCropAssignments();
 
   stockReturns = stockReturns.map((r, index) => {
     const unitPrice = parseFloat(r.unitPrice) || 0;
